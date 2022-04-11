@@ -1,5 +1,5 @@
 # withings-influxdbv2
-Docker container to fetch data from the Withings API and place it in your influxdb.
+Docker container to fetch data from the Withings API and place it in your influxdb. Uses https://github.com/vangorra/python_withings_api
 
 ## Withings API Token
 - Go to: https://developer.withings.com
