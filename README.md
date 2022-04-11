@@ -9,7 +9,7 @@ Docker container to fetch data from the Withings API and place it in your influx
 
 ## InfluxDBv2 Setup
 
-Setup InfluxDBv2, create bucket and create a totken with write permissions for said bucket.
+Setup InfluxDBv2, create bucket and create a token with write permissions for said bucket.
 
 ## Docker Setup
 ```
