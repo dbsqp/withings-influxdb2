@@ -23,8 +23,7 @@ RUN pip3 install pytz influxdb-client requests
 ENV PYTHONIOENCODING=utf-8
 
 # Copy files
-ADD lnetatmo.py /
-ADD netatmo2influxdb.py /
+ADD withings2influxdb.py /
 ADD get.sh /
 
 # Run
