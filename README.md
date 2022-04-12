@@ -5,7 +5,7 @@ Docker container to fetch data from the Withings API and place it in your influx
 - Go to: https://developer.withings.com
 - Sign up.
 - Get your client id and client secret.
-- Get your Callback URI
+- Get your Callback URL
 
 ## InfluxDBv2 Setup
 
@@ -16,8 +16,7 @@ Setup InfluxDBv2, create bucket and create a token with write permissions for sa
 $ docker run -d \
  -e WITHINGS_CLIENT_ID="<WITHINGS CLIENT ID>" \
  -e WITHINGS_CLIENT_SECRET="<WITHINGS CLIENT SECRET>" \
- -e WITHINGS_USERNAME="<WITHINGS USERNAME>" \
- -e WITHINGS_PASSWORD="<WITHINGS PASSWORD>" \
+ -e WITHINGS_AUTH_CODE="<WITHINGS_AUTH_CODE>" \
  -e INFLUXDB2_HOST="<INFLUXDBv2 SERVER>" \
  -e INFLUXDB2_PORT="8086" \
  -e INFLUXDB2_ORG="Home" \
