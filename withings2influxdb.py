@@ -7,16 +7,10 @@ from influxdb_client import InfluxDBClient, Point, WriteOptions
 from influxdb_client.client.write_api import SYNCHRONOUS
 import json
 import os
-import sys
-import requests
 
-import time
-
-import arrow
 from os import path
 from typing import cast
 import pickle
-from typing_extensions import Final
 from withings_api import WithingsAuth, WithingsApi, AuthScope
 from withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
 
@@ -54,19 +48,19 @@ else:
 
 
 # setup withings API
-TOKEN=path.abspath(
-    path.join(path.dirname(path.abspath(__file__)), "./oauth-token")
-)
+tokenPath = path.abspath(path.join(path.dirname(path.abspath(__file__)), "./oauth"))
+
+os.makedirs(tokenPath, exist_ok=True)
+tokenFile = tokenPath+"/token"
 
 def save_credentials(credentials: CredentialsType) -> None:
-    print("oauth token to:", TOKEN)
-    with open(TOKEN, "wb") as file_handle:
+    print("saving token to:", tokenFile)
+    with open(tokenFile, "wb") as file_handle:
         pickle.dump(credentials, file_handle)
 
-
 def load_credentials() -> CredentialsType:
-    print("oauth token from:", TOKEN)
-    with open(TOKEN, "rb") as file_handle:
+    print("reading token from:", tokenFile)
+    with open(tokenFile, "rb") as file_handle:
         return cast(CredentialsType, pickle.load(file_handle))
 
 auth = WithingsAuth(
@@ -80,7 +74,7 @@ auth = WithingsAuth(
 )
 
 if withings_auth_code == "":
-    authorise_url: Final = auth.get_authorize_url()
+    authorise_url = auth.get_authorize_url()
     print("Goto this URL to authorise:\n\n", authorise_url)
     quit()
 else:
@@ -89,7 +83,7 @@ else:
         save_credentials(auth.get_credentials(withings_auth_code))
         withings_auth_code="DONE"
 
-api = WithingsApi(load_credentials(), refresh_cb=save_credentials)
+read_api = WithingsApi(load_credentials(), refresh_cb=save_credentials)
 
 
 
@@ -108,18 +102,18 @@ def write_influxdb():
     write_api.write(bucket=influxdb2_bucket, org=influxdb2_org, record=[senddata])
 
 
-# get withings data
-now=arrow.utcnow()
-ago=arrow.utcnow().shift(days=-2)
-epochAgo=int(ago.timestamp())
 
+# setup time ranges
+now=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+ago=(datetime.utcnow()+timedelta(days=-2)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
 
 # get height
-heights = api.measure_get_meas(
+heights = read_api.measure_get_meas(
     category=MeasureGetMeasGroupCategory.REAL,
-    startdate=arrow.utcnow().shift(years=-15),
+    startdate=start,
     enddate=now,
     lastupdate=None,
 )
@@ -136,7 +130,7 @@ if showRaw:
 
 
 # get weight/bp/temp
-measurements = api.measure_get_meas(
+measurements = read_api.measure_get_meas(
     category=MeasureGetMeasGroupCategory.REAL,
     startdate=ago,
     enddate=now,
@@ -237,9 +231,10 @@ for measurement in measurements.measuregrps:
         write_influxdb()
 
 
+
 # get sleep summary
 # note GetSleepSummaryField is NOT complate
-sleepSummary = api.sleep_get_summary(
+sleepSummary = read_api.sleep_get_summary(
     data_fields=GetSleepSummaryField,
     startdateymd=ago,
     enddateymd=now,
@@ -285,7 +280,6 @@ for serie in sleepSummary.series:
         # if data[0] == "inbedduration":        dInBed = data[1]
         # if data[0] == "totalduration":        dTotal = data[1]
         # if data[0] == "snoringduration":    dSnoring = data[1]
-
 
     senddata={}
     senddata["time"]=time
@@ -393,14 +387,14 @@ for serie in sleepSummary.series:
         # senddata["fields"]["duration"]=float(dSnoring)
         # write_influxdb()
 
+
+
 # get sleep
-sleepRaw = api.sleep_get(
+sleepRaw = read_api.sleep_get(
     data_fields=GetSleepField,
     startdate=ago,
     enddate=now,
     )
-
-#print("raw:\n",sleepRaw)
 
 # pass sleep
 senddata={}
@@ -448,5 +442,7 @@ for serie in sleepRaw.series:
         write_influxdb()
 
     del senddata["fields"]["raw"]
-    
+
+
+
 exit(0)
