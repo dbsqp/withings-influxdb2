@@ -449,4 +449,4 @@ for serie in sleepRaw.series:
 
     del senddata["fields"]["raw"]
     
-return 0
+exit(0)
