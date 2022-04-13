@@ -25,6 +25,7 @@ $ docker run -d \
  --name "Withings-InfluxDBv2" \
 dbsqp/withings-influxdbv2:latest
 ```
+First start get authentication url from container log, then populate WITHINGS_AUTH_CODE with code taken from callback, once workng set to DONE. Token is stored in directory for easy removal via docker volume.
 
 ## Debug
 To report out further details in the log enable debug:
