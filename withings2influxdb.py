@@ -198,7 +198,7 @@ for measurement in measurements.measuregrps:
     if fat !=0:
         senddata["tags"]["type"]="fat"
         senddata["fields"]["kg"]=float(weightFat)
-        senddata["fields"]["percent"]=rount(float(fat),1)
+        senddata["fields"]["percent"]=round(float(fat),1)
         write_influxdb()
 
         senddata["tags"]["type"]="lean"
