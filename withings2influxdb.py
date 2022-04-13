@@ -2,7 +2,7 @@
 # encoding=utf-8
 
 from pytz import timezone
-import datetime
+from datetime import datetime, timedelta
 from influxdb_client import InfluxDBClient, Point, WriteOptions
 from influxdb_client.client.write_api import SYNCHRONOUS
 import json
@@ -10,9 +10,17 @@ import os
 import sys
 import requests
 
+import time
+
+import arrow
+from os import path
+from typing import cast
+import pickle
+from typing_extensions import Final
+from withings_api import WithingsAuth, WithingsApi, AuthScope
+from withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
 
 # debug enviroment variables
-showraw = False
 debug_str=os.getenv("DEBUG", None)
 if debug_str is not None:
     debug = debug_str.lower() == "true"
@@ -23,16 +31,15 @@ else:
 # netatmo environment variables
 withings_clientId=os.getenv('WITHINGS_CLIENT_ID', "")
 withings_clientSecret=os.getenv('WITHINGS_CLIENT_SECRET', "")
-withings_username=os.getenv('WITHINGS_USERNAME')
-withings_password=os.getenv('WITHINGS_PASSWORD')
-
+withings_callback=os.getenv('WITHINGS_CALLBACK', "")
+withings_auth_code=os.getenv('WITHINGS_AUTH_CODE', "")
 
 # influxDBv2 environment variables
 influxdb2_host=os.getenv('INFLUXDB2_HOST', "localhost")
 influxdb2_port=int(os.getenv('INFLUXDB2_PORT', "8086"))
 influxdb2_org=os.getenv('INFLUXDB2_ORG', "org")
 influxdb2_token=os.getenv('INFLUXDB2_TOKEN', "token")
-influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "netatmo")
+influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 
 
 # hard encoded environment variables
@@ -45,146 +52,399 @@ else:
     print ( " debug: FALSE" )
 
 
-# netatmo
-authorization = lnetatmo.ClientAuth(clientId=netatmo_clientId, clientSecret=netatmo_clientSecret, username=netatmo_username, password=netatmo_password)
-devList = lnetatmo.WeatherStationData(authorization)
+
+# setup withings API
+TOKEN=path.abspath(
+    path.join(path.dirname(path.abspath(__file__)), "./oauth-token")
+)
+
+def save_credentials(credentials: CredentialsType) -> None:
+    print("oauth token to:", TOKEN)
+    with open(TOKEN, "wb") as file_handle:
+        pickle.dump(credentials, file_handle)
 
 
-# influxDBv2
+def load_credentials() -> CredentialsType:
+    print("oauth token from:", TOKEN)
+    with open(TOKEN, "rb") as file_handle:
+        return cast(CredentialsType, pickle.load(file_handle))
+
+auth = WithingsAuth(
+    client_id=withings_clientId,
+    consumer_secret=withings_clientSecret,
+    callback_uri=withings_callback,
+    scope=(
+        AuthScope.USER_ACTIVITY,
+        AuthScope.USER_METRICS,
+    )
+)
+
+if withings_auth_code == "":
+    authorise_url: Final = auth.get_authorize_url()
+    print("Goto this URL to authorise:\n\n", authorise_url)
+    quit()
+else:
+    if withings_auth_code != "DONE":
+        print("Getting oauth token with auth code:", withings_auth_code)
+        save_credentials(auth.get_credentials(withings_auth_code))
+        withings_auth_code="DONE"
+
+api = WithingsApi(load_credentials(), refresh_cb=save_credentials)
+
+
+
+# setup influxDBv2
 influxdb2_url="http://" + influxdb2_host + ":" + str(influxdb2_port)
 if debug:
-    print ( "influx: "+influxdb2_url )
-    print ( "bucket: "+influxdb2_bucket )
+    print ( "influxdb: "+influxdb2_url+" bucket: "+influxdb2_bucket )
 
 client = InfluxDBClient(url=influxdb2_url, token=influxdb2_token, org=influxdb2_org)
+write_api = client.write_api(write_options=SYNCHRONOUS)
+
+def write_influxdb():
+    if debug:
+        print ("INFLUX: "+influxdb2_bucket)
+        print (json.dumps(senddata,indent=4))
+    write_api.write(bucket=influxdb2_bucket, org=influxdb2_org, record=[senddata])
 
 
-# these keys are float
-keylist=['Temperature', 'min_temp', 'max_temp', 'Pressure', 'AbsolutePressure', 'Rain', 'sum_rain_24', 'sum_rain_1']
-
-# these keys are skipped
-skiplistmod=['_id','station_name','date_setup','last_setup','type','last_status_store','module_name','firmware','last_message', 'last_seen', 'battery_vp','last_upgrade','co2_calibrating', 'data_type', 'place', 'home_id', 'home_name','dashboard_data', 'modules','reachable']
-skiplistdsh=['temp_trend', 'pressure_trend', 'date_min_temp', 'date_max_temp', 'max_temp', 'min_temp', 'AbsolutePressure', 'time_utc','sum_rain_1','sum_rain_24']
-
-# these keys are outside
-outsidelist=['Rain','Wind']
+# get withings data
+now=arrow.utcnow()
+ago=arrow.utcnow().shift(days=-2)
+epochAgo=int(ago.timestamp())
 
 
-# pass data to InfluxDB
-def send_data(ds):    
+
+
+# get height
+heights = api.measure_get_meas(
+    category=MeasureGetMeasGroupCategory.REAL,
+    startdate=arrow.utcnow().shift(years=-15),
+    enddate=now,
+    lastupdate=None,
+)
+
+height=0
+for measurement in heights.measuregrps:
+    for measure in measurement.measures:
+        if measure.type == MeasureType.HEIGHT:
+            height = round(measure.value * 10 ** measure.unit, 2)
+
+if showRaw:
+    print("RAW:\n  HEIGHT ",height)
+
+
+
+# get weight/bp/temp
+measurements = api.measure_get_meas(
+    category=MeasureGetMeasGroupCategory.REAL,
+    startdate=ago,
+    enddate=now,
+    lastupdate=None,
+)
+
+# pass weight/bp/temp
+for measurement in measurements.measuregrps:
+    weight=0
+    fat=0
+    sys=0
+    body=0
+
+    time = measurement.date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if showRaw:
+        print("RAW:\n  time ",time)
+    for measure in measurement.measures:
+        value = round(measure.value * 10 ** measure.unit, 2)
+
+        if measure.type == MeasureType.WEIGHT:                weight = value
+        if measure.type == MeasureType.FAT_RATIO:                fat = value
+        if measure.type == MeasureType.FAT_MASS_WEIGHT:    weightFat = value
+        if measure.type == MeasureType.FAT_FREE_MASS:     weightLean = value
+        if measure.type == MeasureType.HEART_RATE:                hr = value
+        if measure.type == MeasureType.DIASTOLIC_BLOOD_PRESSURE: dia = value
+        if measure.type == MeasureType.SYSTOLIC_BLOOD_PRESSURE:  sys = value
+        if measure.type == MeasureType.BODY_TEMPERATURE:        body = value
+        if measure.type == MeasureType.SKIN_TEMPERATURE:        skin = value
+        if showRaw:
+            print(" ",measure.type.name, value)
+
     senddata={}
-    dd=ds['dashboard_data']
-    time = dd['time_utc']
-    timeOut = datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%dT%H:%M:%SZ") 
+    senddata["measurement"]="weight"
+    senddata["time"]=time
+    senddata["tags"]={}
+    senddata["tags"]["source"]="docker withings-influxdbv2"
+    senddata["tags"]["origin"]="Withings"
+    senddata["fields"]={}
 
-    # pass module data
-    for key in ds:
-        if key in skiplistmod:
-            if debug and showraw:
-                print ( "Skipped: "+key )
-            continue
+    if weight !=0:
+        senddata["tags"]["type"]="total"
+        senddata["fields"]["kg"]=round(float(weight),1)
 
-        if key == 'battery_percent':
-            measurement="battery"
-            time=ds['last_seen']
-        
-        if key == "rf_status":
-            measurement="signal"
-            time=ds['last_seen']
+        if height > 0:
+            senddata["fields"]["bmi"]=round(weight/(height*height),1)
+            write_influxdb()
+            del senddata["fields"]["bmi"]
 
-        if key == "wifi_status":
-            measurement="signal"
-            time=ds['last_status_store']
-            
-        timeOut = datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%dT%H:%M:%SZ") 
-
-        senddata["measurement"]=measurement
-        senddata["time"]=timeOut
-        senddata["tags"]={}
-        senddata["tags"]["source"]="docker netatmo-influxdbv2"
-        senddata["tags"]["origin"]="Netatmo"
-        senddata["tags"]["sensor"]=ds['module_name']
-        senddata["tags"]["hardware"]=ds['_id']
-        senddata["fields"]={}
-        senddata["fields"]["percent"]=float(ds[key])
-        if debug:
-            print ("INFLUX: "+influxdb2_bucket)
-            print (json.dumps(senddata,indent=4))
-        write_api.write(bucket=influxdb2_bucket, org=influxdb2_org, record=[senddata])
-
-    # pass dashboard_data
-    for key in dd:
-        if key in skiplistdsh:
-            if debug and showraw:
-                print ( "Skipped: "+key )
-            continue
-
-        if key in keylist:
-            value=float(dd[key])
+            senddata["tags"]["type"]="overweight"
+            senddata["fields"]["kg"]=round(weight-(25*height*height),1)
+            write_influxdb()
         else:
-            value=dd[key]    
-   
-        senddata["measurement"]=key.lower()
-        senddata["time"]=timeOut
-        senddata["tags"]={}
-        senddata["tags"]["source"]="docker netatmo-influxdbv2"
-        senddata["tags"]["origin"]="Netatmo"
-        senddata["tags"]["sensor"]=ds['module_name']
-        senddata["tags"]["hardware"]=ds['_id']
-        senddata["fields"]={}
+            write_influxdb()
 
-        if key == "Temperature":
-            senddata["fields"]["temp"]=value
+        del senddata["fields"]["kg"]
+        del senddata["tags"]["type"]
 
-        if key == "Humidity":
-            senddata["fields"]["percent"]=value
+    if fat !=0:
+        senddata["tags"]["type"]="fat"
+        senddata["fields"]["kg"]=float(weightFat)
+        senddata["fields"]["percent"]=rount(float(fat),1)
+        write_influxdb()
 
-        if key == "CO2":
-            senddata["fields"]["ppm"]=value
+        senddata["tags"]["type"]="lean"
+        senddata["fields"]["kg"]=round(float(weightLean),1)
+        senddata["fields"]["percent"]=round(float(100-fat),1)
+        write_influxdb()
+        del senddata["fields"]["kg"]
+        del senddata["fields"]["percent"]
+        del senddata["tags"]["type"]
 
-        if key == "Pressure":
-            senddata["fields"]["mbar"]=value
+    if sys !=0:
+        senddata["measurement"]="heart"
+        senddata["tags"]["type"]="systolic"
+        senddata["fields"]["bp"]=float(sys)
+        write_influxdb()
 
-        if key == "Noise":
-            senddata["fields"]["dB"]=value
+        senddata["tags"]["type"]="diastolic"
+        senddata["fields"]["bp"]=float(dia)
+        write_influxdb()
+        del senddata["fields"]["bp"]
 
-        if key == "Rain":
-            senddata["fields"]["mm"]=value
-  
-        if debug:
-            print ("INFLUX: "+influxdb2_bucket)
-            print (json.dumps(senddata,indent=4))
-        write_api.write(bucket=influxdb2_bucket, org=influxdb2_org, record=[senddata])
+        senddata["tags"]["type"]="resting"
+        senddata["fields"]["bpm"]=float(hr)
+        write_influxdb()
+        del senddata["fields"]["bpm"]
+        del senddata["tags"]["type"]
 
+    if body !=0:
+        senddata["measurement"]="temperature"
+        senddata["tags"]["sensor"]="Body"
+        senddata["fields"]["temp"]=float(body)
+        write_influxdb()
 
-# pass stations
-for station_id in devList.stations:
-    ds=devList.stationById(station_id)
-    if ds is None:
-        continue
-    if not 'dashboard_data' in ds:
-        continue
-    if debug:
-        if 'station_name' in ds:
-            print ("\nStation: "+ds['station_name']+" - "+station_id)
-        else:
-            print ("\nStation: "+station_id)
-        if showraw:
-            print ("RAW:")
-            print (json.dumps(ds,indent=4))
-
-    write_api = client.write_api(write_options=SYNCHRONOUS)
-    send_data(ds)
+        senddata["tags"]["sensor"]="Skin"
+        senddata["fields"]["temp"]=float(skin)
+        write_influxdb()
 
 
-# pass modules
-for name in devList.modulesNamesList():
-    ds=devList.moduleByName(name)
-    if ds is None:
-        continue
-    if not 'dashboard_data' in ds:
-        continue
-    if debug:
-        print ( "\nModule: "+ds['module_name']+" - "+ds['_id'])
+# get sleep summary
+# note GetSleepSummaryField is NOT complate
+sleepSummary = api.sleep_get_summary(
+    data_fields=GetSleepSummaryField,
+    startdateymd=ago,
+    enddateymd=now,
+    lastupdate=None,
+)
 
-    send_data(ds)
+# pass sleep summary
+for serie in sleepSummary.series:
+    hrAvg=0
+
+    time = serie.date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if showRaw:
+         print("RAW:\n  time ",time)
+
+    for data in serie.data:
+        if showRaw:
+            print(" ",data[0]," = ",data[1])
+
+        if data[0] == "hr_average": hrAvg = data[1]
+        if data[0] == "hr_max":     hrMax = data[1]
+        if data[0] == "hr_min":     hrMin = data[1]
+        if data[0] == "rr_average": rrAvg = data[1]
+        if data[0] == "rr_max":     rrMax = data[1]
+        if data[0] == "rr_min":     rrMin = data[1]
+
+        if data[0] == "deepsleepduration":     dDeep = data[1]
+        if data[0] == "lightsleepduration":    dLite = data[1]
+        if data[0] == "remsleepduration":       dREM = data[1]
+        if data[0] == "wakeupduration":      dWakeup = data[1]
+        if data[0] == "wakeupcount":         nWakeup = data[1]
+        if data[0] == "snoringepisodecount":  nSnore = data[1]
+
+        if data[0] == "sleep_score":           score = data[1]
+
+        # these fields are NOT reported from by withings-api
+        # if data[0] == "sleep_efficiency": efficiency = data[1]
+        # if data[0] == "remcount":               nREM = data[1]
+        # if data[0] == "outofbedcount":       nOutBed = data[1]
+        # if data[0] == "sleeplatency":         lSleep = data[1]
+        # if data[0] == "wakeuplatency":       lWakeup = data[1]
+        # if data[0] == "awakeduration":        dAwake = data[1]
+        # if data[0] == "inbedduration":        dInBed = data[1]
+        # if data[0] == "totalduration":        dTotal = data[1]
+        # if data[0] == "snoringduration":    dSnoring = data[1]
+
+
+    senddata={}
+    senddata["time"]=time
+    senddata["tags"]={}
+    senddata["tags"]["source"]="docker withings-influxdbv2"
+    senddata["tags"]["origin"]="Withings"
+    senddata["fields"]={}
+
+    if rrAvg !=0:
+        senddata["measurement"]="respiration"
+        senddata["tags"]["type"]="sleeping"
+        senddata["tags"]["mode"]="avg"
+        senddata["fields"]["bpm"]=float(rrAvg)
+        write_influxdb()
+
+        senddata["tags"]["mode"]="Max"
+        senddata["fields"]["bpm"]=float(rrMax)
+        write_influxdb()
+
+        senddata["tags"]["mode"]="Min"
+        senddata["fields"]["bpm"]=float(rrMin)
+        write_influxdb()
+
+        del senddata["fields"]["bpm"]
+        del senddata["tags"]["mode"]
+
+    if hrAvg !=0:
+        senddata["measurement"]="heart"
+        senddata["tags"]["type"]="sleeping"
+        senddata["tags"]["mode"]="avg"
+        senddata["fields"]["bpm"]=float(hrAvg)
+        write_influxdb()
+
+        senddata["tags"]["mode"]="Max"
+        senddata["fields"]["bpm"]=float(hrMax)
+        write_influxdb()
+
+        senddata["tags"]["mode"]="Min"
+        senddata["fields"]["bpm"]=float(hrMin)
+        write_influxdb()
+
+        del senddata["fields"]["bpm"]
+        del senddata["tags"]["mode"]
+
+    if dDeep !=0:
+        senddata["measurement"]="sleep"
+        senddata["tags"]["type"]="deep"
+        senddata["fields"]["duration"]=round(dDeep/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="light"
+        senddata["fields"]["duration"]=round(dLite/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="rem"
+        senddata["fields"]["duration"]=round(dREM/3600,1)
+        write_influxdb()
+
+        senddata["tags"]["type"]="wakeup"
+        senddata["fields"]["duration"]=round(dWakeup/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="score"
+        senddata["fields"]["percent"]=float(score)
+        write_influxdb()
+
+        senddata["tags"]["type"]="snoring"
+        senddata["fields"]["count"]=int(nSnore)
+        write_influxdb()
+
+        # these items are not reported from withings-api
+        # senddata["tags"]["type"]="efficiency"
+        # senddata["fields"]["percent"]=float(efficiency)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="rem"
+        # senddata["fields"]["count"]=int(nREM)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="outofbed"
+        # senddata["fields"]["count"]=int(nOutBed)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="sleep"
+        # senddata["fields"]["latency"]=float(lSleep)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="wakeup"
+        # senddata["fields"]["latency"]=float(lWakeup)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="awake"
+        # senddata["fields"]["duration"]=float(dAwake)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="inbed"
+        # senddata["fields"]["duration"]=float(dInBed)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="total"
+        # senddata["fields"]["duration"]=float(dTotal)
+        # write_influxdb()
+
+        # senddata["tags"]["type"]="snoring"
+        # senddata["fields"]["duration"]=float(dSnoring)
+        # write_influxdb()
+
+# get sleep
+sleepRaw = api.sleep_get(
+    data_fields=GetSleepField,
+    startdate=ago,
+    enddate=now,
+    )
+
+#print("raw:\n",sleepRaw)
+
+# pass sleep
+senddata={}
+senddata["tags"]={}
+senddata["tags"]["source"]="docker withings-influxdbv2"
+senddata["tags"]["origin"]="Withings"
+senddata["tags"]["mode"]="raw"
+senddata["fields"]={}
+
+for serie in sleepRaw.series:
+    hrAvg=0
+
+    senddata["measurement"]="heart"
+    senddata["tags"]["type"]="sleeping"
+
+    for record in serie.hr:
+        if showRaw:
+            print(" ",record.timestamp," HR = ",record.value)
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        senddata["time"]=time
+        senddata["fields"]["bpm"]=float(record.value)
+        write_influxdb()
+
+    del senddata["fields"]["bpm"]
+    senddata["measurement"]="respiration"
+
+    for record in serie.rr:
+        if showRaw:
+            print(" ",record.timestamp," RR = ",record.value)
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        senddata["time"]=time
+        senddata["fields"]["bpm"]=float(record.value)
+        write_influxdb()
+
+    del senddata["fields"]["bpm"]
+    senddata["measurement"]="sleep"
+    senddata["tags"]["type"]="snoring"
+
+    for record in serie.snoring:
+        if showRaw:
+            print(" ",record.timestamp," SN = ",record.value)
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        senddata["time"]=time
+        senddata["fields"]["raw"]=float(record.value)
+        write_influxdb()
+
+    del senddata["fields"]["raw"]
