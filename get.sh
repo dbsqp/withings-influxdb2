@@ -14,5 +14,5 @@ do
   fi
   date
   echo "Sleep 6 hrs"
-  sleep 3600*6
+  sleep 21600
 done
