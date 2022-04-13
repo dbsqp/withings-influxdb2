@@ -448,3 +448,5 @@ for serie in sleepRaw.series:
         write_influxdb()
 
     del senddata["fields"]["raw"]
+    
+return 0
