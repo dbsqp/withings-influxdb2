@@ -11,6 +11,7 @@ import os
 from os import path
 from typing import cast
 import pickle
+from typing_extensions import Final
 from withings_api import WithingsAuth, WithingsApi, AuthScope
 from withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
 
