@@ -12,6 +12,7 @@ from os import path
 from typing import cast
 import pickle
 from typing_extensions import Final
+from oauthlib.oauth2.rfc6749.errors import MissingTokenError
 from withings_api import WithingsAuth, WithingsApi, AuthScope
 from withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
 
