@@ -22,7 +22,8 @@ if debug_str is not None:
     debug = debug_str.lower() == "true"
 else:
     debug = False
-
+    
+showRaw = False
 
 # netatmo environment variables
 withings_clientId=os.getenv('WITHINGS_CLIENT_ID', "")
