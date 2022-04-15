@@ -55,11 +55,14 @@ tokenPath = path.abspath(path.join(path.dirname(path.abspath(__file__)), "./oaut
 
 os.makedirs(tokenPath, mode = 0o777, exist_ok=True)
 tokenFile = tokenPath+"/token"
+tokenFileJSON = tokenPath+"/token.json"
 
 def save_credentials(credentials: CredentialsType) -> None:
     print("saving token to:", tokenFile)
     with open(tokenFile, "wb") as file_handle:
         pickle.dump(credentials, file_handle)
+    with open(tokenFileJSON, "wb") as file_handle:
+        json.dump(credentials, file_handle)
 
 def load_credentials() -> CredentialsType:
     print("reading token from:", tokenFile)
