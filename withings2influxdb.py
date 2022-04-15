@@ -53,7 +53,7 @@ else:
 # setup withings API
 tokenPath = path.abspath(path.join(path.dirname(path.abspath(__file__)), "./oauth"))
 
-os.makedirs(tokenPath, exist_ok=True)
+os.makedirs(tokenPath, mode = 0o777, exist_ok=True)
 tokenFile = tokenPath+"/token"
 
 def save_credentials(credentials: CredentialsType) -> None:
