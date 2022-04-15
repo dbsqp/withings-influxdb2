@@ -85,10 +85,7 @@ if withings_auth_code == "":
     quit()
 else:
     if withings_auth_code != "DONE":
-        print("Getting oauth token with auth code:", withings_auth_code)
-        
-        print("creds:\n"+auth.get_credentials(withings_auth_code))
-        
+        print("Getting oauth token with auth code:", withings_auth_code)        
         save_credentials(auth.get_credentials(withings_auth_code))
         
         print("saved")
