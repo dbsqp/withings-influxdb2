@@ -13,8 +13,12 @@ from typing import cast
 import pickle
 from typing_extensions import Final
 from oauthlib.oauth2.rfc6749.errors import MissingTokenError
-from python_withings_api/withings_api import WithingsAuth, WithingsApi, AuthScope
-from python_withings_api/withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
+
+import sys
+sys.path.insert(0, '/python_withings_api')
+
+from withings_api import WithingsAuth, WithingsApi, AuthScope
+from withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
 
 # debug enviroment variables
 debug_str=os.getenv("DEBUG", None)
@@ -40,13 +44,22 @@ influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 
 
 # hard encoded environment variables
+#def include(filename):
+if os.path.exists('private-credentials.py'):
+    print("include: private-credentials.py")
+    exec(compile(source=open('private-credentials.py').read(), filename='private-credentials.py', mode='exec'))
 
+#include('private-credentials.py')
+withings_auth_code=""
+
+debug = True
+showRaw = True
 
 # report debug status
 if debug:
-    print ( " debug: TRUE" )
+    print ( "  debug: TRUE" )
 else:
-    print ( " debug: FALSE" )
+    print ( "  debug: FALSE" )
 
 
 
@@ -55,14 +68,11 @@ tokenPath = path.abspath(path.join(path.dirname(path.abspath(__file__)), "./oaut
 
 os.makedirs(tokenPath, exist_ok=True)
 tokenFile = tokenPath+"/token"
-tokenFileJSON = tokenPath+"/token.json"
 
 def save_credentials(credentials: CredentialsType) -> None:
     print("saving token to:", tokenFile)
     with open(tokenFile, "wb") as file_handle:
         pickle.dump(credentials, file_handle)
-    with open(tokenFileJSON, "wb") as file_handle:
-        json.dump(credentials, file_handle)
 
 def load_credentials() -> CredentialsType:
     print("reading token from:", tokenFile)
@@ -87,8 +97,6 @@ else:
     if withings_auth_code != "DONE":
         print("Getting oauth token with auth code:", withings_auth_code)        
         save_credentials(auth.get_credentials(withings_auth_code))
-        
-        print("saved")
         withings_auth_code="DONE"
 
 read_api = WithingsApi(load_credentials(), refresh_cb=save_credentials)
