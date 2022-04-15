@@ -287,7 +287,7 @@ for serie in sleepSummary.series:
         if data[0] == "total_timeinbed":      dInBed = data[1]
 
         if data[0] == "sleep_latency":        lSleep = data[1]
-        if data[0] == "wakup_latency":       lWakeup = data[1]
+        if data[0] == "wakeup_latency":      lWakeup = data[1]
 
         if data[0] == "wakeupcount":         nWakeup = data[1]
         if data[0] == "snoringepisodecount":  nSnore = data[1]
@@ -380,6 +380,8 @@ for serie in sleepSummary.series:
         senddata["tags"]["type"]="inbed"
         senddata["fields"]["duration"]=round(dInBed/3600,2)
         write_influxdb()
+        del senddata["fields"]["duration"]
+
 
         senddata["tags"]["type"]="sleep"
         senddata["fields"]["latency"]=float(lSleep)
@@ -388,6 +390,7 @@ for serie in sleepSummary.series:
         senddata["tags"]["type"]="wakeup"
         senddata["fields"]["latency"]=float(lWakeup)
         write_influxdb()
+        del senddata["fields"]["latency"]
 
 
         senddata["tags"]["type"]="snoring"
@@ -405,6 +408,7 @@ for serie in sleepSummary.series:
         senddata["tags"]["type"]="outofbed"
         senddata["fields"]["count"]=int(nOutBed)
         write_influxdb()
+        del senddata["fields"]["count"]
 
 
         senddata["tags"]["type"]="score"
@@ -414,6 +418,7 @@ for serie in sleepSummary.series:
         senddata["tags"]["type"]="efficiency"
         senddata["fields"]["percent"]=float(efficiency)
         write_influxdb()
+        del senddata["fields"]["percent"]
 
 
         senddata["tags"]["type"]="apnea"
@@ -421,7 +426,7 @@ for serie in sleepSummary.series:
         write_influxdb()
 
         senddata["tags"]["type"]="disturbance"
-        senddata["fields"]["index"]=float(iBDisp)
+        senddata["fields"]["index"]=float(iBDist)
         write_influxdb()
 
 
