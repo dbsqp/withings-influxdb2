@@ -50,7 +50,7 @@ if os.path.exists('private-api.py'):
     print("included: private-api.py")
     exec(compile(source=open('private-api.py').read(), filename='private-api.py', mode='exec'))
     withings_auth_code="DONE"
-    debug = True
+    debug = False
     showRaw = True
 
 
@@ -279,22 +279,26 @@ for serie in sleepSummary.series:
         if data[0] == "deepsleepduration":     dDeep = data[1]
         if data[0] == "lightsleepduration":    dLite = data[1]
         if data[0] == "remsleepduration":       dREM = data[1]
-        if data[0] == "wakeupduration":      dWakeup = data[1]
+        if data[0] == "durationtowakeup":    dToWake = data[1]
+        if data[0] == "durationtosleep":    dToSleep = data[1]
+        if data[0] == "snoring":            dSnoring = data[1]
+        if data[0] == "waso":                dWokeup = data[1]
+        if data[0] == "total_sleep_time":     dSleep = data[1]
+        if data[0] == "total_timeinbed":      dInBed = data[1]
+
+        if data[0] == "sleep_latency":        lSleep = data[1]
+        if data[0] == "wakup_latency":       lWakeup = data[1]
+
         if data[0] == "wakeupcount":         nWakeup = data[1]
         if data[0] == "snoringepisodecount":  nSnore = data[1]
+        if data[0] == "nb_rem_episodes":        nREM = data[1]
+        if data[0] == "out_of_bed_count":    nOutBed = data[1]
 
         if data[0] == "sleep_score":           score = data[1]
+        if data[0] == "sleep_efficiency": efficiency = data[1]
 
-        # these fields are NOT reported from by withings-api
-        # if data[0] == "sleep_efficiency": efficiency = data[1]
-        # if data[0] == "remcount":               nREM = data[1]
-        # if data[0] == "outofbedcount":       nOutBed = data[1]
-        # if data[0] == "sleeplatency":         lSleep = data[1]
-        # if data[0] == "wakeuplatency":       lWakeup = data[1]
-        # if data[0] == "awakeduration":        dAwake = data[1]
-        if data[0] == "total_timeinbed":      dInBed = data[1]
-        # if data[0] == "totalduration":        dTotal = data[1]
-        # if data[0] == "snoringduration":    dSnoring = data[1]
+        if data[0] == "breathing_disturbances_intensity": iBDist = data[1]
+        if data[0] == "apnea_hypopnea_index": iApnea = data[1]
 
     senddata={}
     senddata["time"]=time
@@ -354,53 +358,71 @@ for serie in sleepSummary.series:
         write_influxdb()
 
         senddata["tags"]["type"]="wakeup"
-        senddata["fields"]["duration"]=round(dWakeup/3600,2)
+        senddata["fields"]["duration"]=round(dToWake/3600,2)
         write_influxdb()
 
-        senddata["tags"]["type"]="score"
-        senddata["fields"]["percent"]=float(score)
+        senddata["tags"]["type"]="tosleep"
+        senddata["fields"]["duration"]=round(dToSleep/3600,2)
         write_influxdb()
+
+        senddata["tags"]["type"]="snoring"
+        senddata["fields"]["duration"]=round(dSnoring/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="woke"
+        senddata["fields"]["duration"]=round(dWokeup/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="sleep"
+        senddata["fields"]["duration"]=round(dSleep/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="inbed"
+        senddata["fields"]["duration"]=round(dInBed/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="sleep"
+        senddata["fields"]["latency"]=float(lSleep)
+        write_influxdb()
+
+        senddata["tags"]["type"]="wakeup"
+        senddata["fields"]["latency"]=float(lWakeup)
+        write_influxdb()
+
 
         senddata["tags"]["type"]="snoring"
         senddata["fields"]["count"]=int(nSnore)
         write_influxdb()
 
-        # these items are not reported from withings-api
-        # senddata["tags"]["type"]="efficiency"
-        # senddata["fields"]["percent"]=float(efficiency)
-        # write_influxdb()
-
-        # senddata["tags"]["type"]="rem"
-        # senddata["fields"]["count"]=int(nREM)
-        # write_influxdb()
-
-        # senddata["tags"]["type"]="outofbed"
-        # senddata["fields"]["count"]=int(nOutBed)
-        # write_influxdb()
-
-        # senddata["tags"]["type"]="sleep"
-        # senddata["fields"]["latency"]=float(lSleep)
-        # write_influxdb()
-
-        # senddata["tags"]["type"]="wakeup"
-        # senddata["fields"]["latency"]=float(lWakeup)
-        # write_influxdb()
-
-        # senddata["tags"]["type"]="awake"
-        # senddata["fields"]["duration"]=float(dAwake)
-        # write_influxdb()
-
-        senddata["tags"]["type"]="inbed"
-        senddata["fields"]["duration"]=float(dInBed)
+        senddata["tags"]["type"]="rem"
+        senddata["fields"]["count"]=int(nREM)
         write_influxdb()
 
-        # senddata["tags"]["type"]="total"
-        # senddata["fields"]["duration"]=float(dTotal)
-        # write_influxdb()
+        senddata["tags"]["type"]="wakeup"
+        senddata["fields"]["count"]=int(nWakeup)
+        write_influxdb()
 
-        # senddata["tags"]["type"]="snoring"
-        # senddata["fields"]["duration"]=float(dSnoring)
-        # write_influxdb()
+        senddata["tags"]["type"]="outofbed"
+        senddata["fields"]["count"]=int(nOutBed)
+        write_influxdb()
+
+
+        senddata["tags"]["type"]="score"
+        senddata["fields"]["percent"]=float(score)
+        write_influxdb()
+
+        senddata["tags"]["type"]="efficiency"
+        senddata["fields"]["percent"]=float(efficiency)
+        write_influxdb()
+
+
+        senddata["tags"]["type"]="apnea"
+        senddata["fields"]["index"]=float(iApnea)
+        write_influxdb()
+
+        senddata["tags"]["type"]="disturbance"
+        senddata["fields"]["index"]=float(iBDisp)
+        write_influxdb()
 
 
 
