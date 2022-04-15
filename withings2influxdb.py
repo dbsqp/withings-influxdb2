@@ -45,15 +45,15 @@ influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 
 # hard encoded environment variables
 #def include(filename):
-if os.path.exists('private-credentials.py'):
-    print("include: private-credentials.py")
-    exec(compile(source=open('private-credentials.py').read(), filename='private-credentials.py', mode='exec'))
+if os.path.exists('private-api.py'):
+    print("include: private-api.py")
+    exec(compile(source=open('private-api.py').read(), filename='private-api.py', mode='exec'))
+    withings_auth_code=""
+    debug = True
+    showRaw = True
 
 #include('private-credentials.py')
-withings_auth_code=""
 
-debug = True
-showRaw = True
 
 # report debug status
 if debug:
