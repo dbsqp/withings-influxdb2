@@ -14,11 +14,13 @@ import pickle
 from typing_extensions import Final
 from oauthlib.oauth2.rfc6749.errors import MissingTokenError
 
-import sys
-sys.path.insert(0, '/python_withings_api')
+#from withings_api import WithingsAuth, WithingsApi, AuthScope
+#from withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
 
-from withings_api import WithingsAuth, WithingsApi, AuthScope
-from withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
+from python_withings_api.withings_api import WithingsAuth, WithingsApi, AuthScope
+from python_withings_api.withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
+
+
 
 # debug enviroment variables
 debug_str=os.getenv("DEBUG", None)
@@ -44,22 +46,19 @@ influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 
 
 # hard encoded environment variables
-#def include(filename):
 if os.path.exists('private-api.py'):
-    print("include: private-api.py")
+    print("included: private-api.py")
     exec(compile(source=open('private-api.py').read(), filename='private-api.py', mode='exec'))
-    withings_auth_code=""
+    withings_auth_code="DONE"
     debug = True
     showRaw = True
-
-#include('private-credentials.py')
 
 
 # report debug status
 if debug:
-    print ( "  debug: TRUE" )
+    print ( "   debug: TRUE" )
 else:
-    print ( "  debug: FALSE" )
+    print ( "   debug: FALSE" )
 
 
 
@@ -293,7 +292,7 @@ for serie in sleepSummary.series:
         # if data[0] == "sleeplatency":         lSleep = data[1]
         # if data[0] == "wakeuplatency":       lWakeup = data[1]
         # if data[0] == "awakeduration":        dAwake = data[1]
-        # if data[0] == "inbedduration":        dInBed = data[1]
+        if data[0] == "total_timeinbed":      dInBed = data[1]
         # if data[0] == "totalduration":        dTotal = data[1]
         # if data[0] == "snoringduration":    dSnoring = data[1]
 
@@ -391,9 +390,9 @@ for serie in sleepSummary.series:
         # senddata["fields"]["duration"]=float(dAwake)
         # write_influxdb()
 
-        # senddata["tags"]["type"]="inbed"
-        # senddata["fields"]["duration"]=float(dInBed)
-        # write_influxdb()
+        senddata["tags"]["type"]="inbed"
+        senddata["fields"]["duration"]=float(dInBed)
+        write_influxdb()
 
         # senddata["tags"]["type"]="total"
         # senddata["fields"]["duration"]=float(dTotal)
