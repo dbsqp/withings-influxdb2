@@ -57,11 +57,6 @@ os.makedirs(tokenPath, exist_ok=True)
 tokenFile = tokenPath+"/token"
 tokenFileJSON = tokenPath+"/token.json"
 
-print ( "tokenFile: "+tokenFile )
-
-with open(tokenFile, "wb") as file_handle:
-   pickle.dump("hello", file_handle)
-
 def save_credentials(credentials: CredentialsType) -> None:
     print("saving token to:", tokenFile)
     with open(tokenFile, "wb") as file_handle:
@@ -91,7 +86,12 @@ if withings_auth_code == "":
 else:
     if withings_auth_code != "DONE":
         print("Getting oauth token with auth code:", withings_auth_code)
+        
+        print("creds:\n"+auth.get_credentials(withings_auth_code))
+        
         save_credentials(auth.get_credentials(withings_auth_code))
+        
+        print("saved")
         withings_auth_code="DONE"
 
 read_api = WithingsApi(load_credentials(), refresh_cb=save_credentials)
