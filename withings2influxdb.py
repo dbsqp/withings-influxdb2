@@ -515,6 +515,4 @@ for serie in sleepRaw.series:
 
     del senddata["fields"]["duration"]
 
-
-
 exit(0)
