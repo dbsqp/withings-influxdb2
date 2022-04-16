@@ -327,11 +327,11 @@ for serie in sleepSummary.series:
         senddata["fields"]["bpm"]=float(rrAvg)
         write_influxdb()
 
-        senddata["tags"]["mode"]="Max"
+        senddata["tags"]["mode"]="max"
         senddata["fields"]["bpm"]=float(rrMax)
         write_influxdb()
 
-        senddata["tags"]["mode"]="Min"
+        senddata["tags"]["mode"]="min"
         senddata["fields"]["bpm"]=float(rrMin)
         write_influxdb()
 
@@ -346,11 +346,11 @@ for serie in sleepSummary.series:
         senddata["fields"]["bpm"]=float(hrAvg)
         write_influxdb()
 
-        senddata["tags"]["mode"]="Max"
+        senddata["tags"]["mode"]="max"
         senddata["fields"]["bpm"]=float(hrMax)
         write_influxdb()
 
-        senddata["tags"]["mode"]="Min"
+        senddata["tags"]["mode"]="min"
         senddata["fields"]["bpm"]=float(hrMin)
         write_influxdb()
 
@@ -451,7 +451,6 @@ senddata={}
 senddata["tags"]={}
 senddata["tags"]["source"]="docker withings-influxdbv2"
 senddata["tags"]["origin"]="Withings"
-senddata["tags"]["mode"]="raw"
 senddata["fields"]={}
 
 for serie in sleepRaw.series:
@@ -465,10 +464,28 @@ for serie in sleepRaw.series:
             print(" ",record.timestamp," HR = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
+        senddata["tags"]["mode"]="raw"
         senddata["fields"]["bpm"]=float(record.value)
         write_influxdb()
 
-    del senddata["fields"]["bpm"]
+    for record in serie.sdnn_1:
+        if showRaw:
+            print(" ",record.timestamp," SD = ",record.value)
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        senddata["time"]=time
+        senddata["tags"]["mode"]="sdev"
+        senddata["fields"]["bpm"]=float(record.value)
+        write_influxdb()
+
+    for record in serie.rmssd:
+        if showRaw:
+            print(" ",record.timestamp,"RMS = ",record.value)
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        senddata["time"]=time
+        senddata["tags"]["mode"]="rms"
+        senddata["fields"]["bpm"]=float(record.value)
+        write_influxdb()
+
     senddata["measurement"]="respiration"
 
     for record in serie.rr:
@@ -476,6 +493,7 @@ for serie in sleepRaw.series:
             print(" ",record.timestamp," RR = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
+        senddata["tags"]["mode"]="raw"
         senddata["fields"]["bpm"]=float(record.value)
         write_influxdb()
 
@@ -488,10 +506,11 @@ for serie in sleepRaw.series:
             print(" ",record.timestamp," SN = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
-        senddata["fields"]["raw"]=float(record.value)
+        senddata["tags"]["mode"]="raw"
+        senddata["fields"]["snoring"]=float(record.value)
         write_influxdb()
 
-    del senddata["fields"]["raw"]
+    del senddata["fields"]["snoring"]
 
 
 
