@@ -297,8 +297,8 @@ for serie in sleepSummary.series:
         if data[0] == "sleep_score":           score = data[1]
         if data[0] == "sleep_efficiency": efficiency = data[1]
 
-        if data[0] == "breathing_disturbances_intensity": iBDist = data[1]
-        if data[0] == "apnea_hypopnea_index": iApnea = data[1]
+        if data[0] == "breathing_disturbances_intensity": disturbed = data[1]
+        if data[0] == "apnea_hypopnea_index":    ahi = data[1]
 
         ## Depreciated
         #if data[0] == "durationtowakeup":    dToWake = data[1]
@@ -314,6 +314,15 @@ for serie in sleepSummary.series:
     if rrAvg !=0:
         senddata["measurement"]="respiration"
         senddata["tags"]["type"]="sleeping"
+
+        senddata["fields"]["ahi"]=float(ahi)
+        write_influxdb()
+        del senddata["fields"]["ahi"]
+
+        senddata["fields"]["disturbed"]=float(disturbed)
+        write_influxdb()
+        del senddata["fields"]["disturbed"]
+
         senddata["tags"]["mode"]="avg"
         senddata["fields"]["bpm"]=float(rrAvg)
         write_influxdb()
@@ -325,6 +334,7 @@ for serie in sleepSummary.series:
         senddata["tags"]["mode"]="Min"
         senddata["fields"]["bpm"]=float(rrMin)
         write_influxdb()
+
 
         del senddata["fields"]["bpm"]
         del senddata["tags"]["mode"]
@@ -427,16 +437,6 @@ for serie in sleepSummary.series:
         senddata["fields"]["percent"]=float(efficiency)
         write_influxdb()
         del senddata["fields"]["percent"]
-
-
-        senddata["tags"]["type"]="apnea"
-        senddata["fields"]["index"]=float(iApnea)
-        write_influxdb()
-
-        senddata["tags"]["type"]="disturbance"
-        senddata["fields"]["index"]=float(iBDist)
-        write_influxdb()
-
 
 
 # get sleep
