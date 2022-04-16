@@ -402,11 +402,11 @@ for serie in sleepSummary.series:
 
 
         senddata["tags"]["type"]="sleep"
-        senddata["fields"]["latency"]=float(lSleep)
+        senddata["fields"]["latency"]=round(lSleep/3600,2)
         write_influxdb()
 
         senddata["tags"]["type"]="wakeup"
-        senddata["fields"]["latency"]=float(lWakeup)
+        senddata["fields"]["latency"]=round(lWakeup/3600,2)
         write_influxdb()
         del senddata["fields"]["latency"]
 
