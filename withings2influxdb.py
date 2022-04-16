@@ -90,7 +90,7 @@ auth = WithingsAuth(
 
 if withings_auth_code == "":
     authorise_url = auth.get_authorize_url()
-    print("Goto this URL to authorise:\n\n", authorise_url)
+    print("Goto this URL to authorise:\n\n",authorise_url)
     quit()
 else:
     if withings_auth_code != "DONE":
@@ -360,6 +360,7 @@ for serie in sleepSummary.series:
     if dDeep !=0:
         senddata["measurement"]="sleep"
         senddata["tags"]["type"]="deep"
+        senddata["tags"]["mode"]="total"
         senddata["fields"]["duration"]=round(dDeep/3600,2)
         write_influxdb()
 
@@ -399,6 +400,7 @@ for serie in sleepSummary.series:
         senddata["fields"]["duration"]=round(dAwake/3600,2)
         write_influxdb()
         del senddata["fields"]["duration"]
+        del senddata["tags"]["mode"]
 
 
         senddata["tags"]["type"]="sleep"
@@ -453,6 +455,7 @@ senddata["tags"]["source"]="docker withings-influxdbv2"
 senddata["tags"]["origin"]="Withings"
 senddata["fields"]={}
 
+
 for serie in sleepRaw.series:
     hrAvg=0
 
@@ -487,30 +490,30 @@ for serie in sleepRaw.series:
         write_influxdb()
 
     senddata["measurement"]="respiration"
+    senddata["tags"]["mode"]="raw"
 
     for record in serie.rr:
         if showRaw:
             print(" ",record.timestamp," RR = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
-        senddata["tags"]["mode"]="raw"
         senddata["fields"]["bpm"]=float(record.value)
         write_influxdb()
 
     del senddata["fields"]["bpm"]
     senddata["measurement"]="sleep"
     senddata["tags"]["type"]="snoring"
+    senddata["tags"]["mode"]="raw"
 
     for record in serie.snoring:
         if showRaw:
             print(" ",record.timestamp," SN = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
-        senddata["tags"]["mode"]="raw"
-        senddata["fields"]["snoring"]=float(record.value)
+        senddata["fields"]["duration"]=round(record.value/3600,2)
         write_influxdb()
 
-    del senddata["fields"]["snoring"]
+    del senddata["fields"]["duration"]
 
 
 
