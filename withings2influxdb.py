@@ -279,8 +279,8 @@ for serie in sleepSummary.series:
         if data[0] == "deepsleepduration":     dDeep = data[1]
         if data[0] == "lightsleepduration":    dLite = data[1]
         if data[0] == "remsleepduration":       dREM = data[1]
-        if data[0] == "durationtowakeup":    dToWake = data[1]
-        if data[0] == "durationtosleep":    dToSleep = data[1]
+        if data[0] == "wakeupduration":       dAwake = data[1]
+
         if data[0] == "snoring":            dSnoring = data[1]
         if data[0] == "waso":                dWokeup = data[1]
         if data[0] == "total_sleep_time":     dSleep = data[1]
@@ -299,6 +299,10 @@ for serie in sleepSummary.series:
 
         if data[0] == "breathing_disturbances_intensity": iBDist = data[1]
         if data[0] == "apnea_hypopnea_index": iApnea = data[1]
+
+        ## Depreciated
+        #if data[0] == "durationtowakeup":    dToWake = data[1]
+        #if data[0] == "durationtosleep":    dToSleep = data[1]
 
     senddata={}
     senddata["time"]=time
@@ -357,13 +361,13 @@ for serie in sleepSummary.series:
         senddata["fields"]["duration"]=round(dREM/3600,1)
         write_influxdb()
 
-        senddata["tags"]["type"]="wakeup"
-        senddata["fields"]["duration"]=round(dToWake/3600,2)
-        write_influxdb()
+        #senddata["tags"]["type"]="wakeup"
+        #senddata["fields"]["duration"]=round(dToWake/3600,2)
+        #write_influxdb()
 
-        senddata["tags"]["type"]="tosleep"
-        senddata["fields"]["duration"]=round(dToSleep/3600,2)
-        write_influxdb()
+        #senddata["tags"]["type"]="tosleep"
+        #senddata["fields"]["duration"]=round(dToSleep/3600,2)
+        #write_influxdb()
 
         senddata["tags"]["type"]="snoring"
         senddata["fields"]["duration"]=round(dSnoring/3600,2)
@@ -379,6 +383,10 @@ for serie in sleepSummary.series:
 
         senddata["tags"]["type"]="inbed"
         senddata["fields"]["duration"]=round(dInBed/3600,2)
+        write_influxdb()
+
+        senddata["tags"]["type"]="awake"
+        senddata["fields"]["duration"]=round(dAwake/3600,2)
         write_influxdb()
         del senddata["fields"]["duration"]
 
