@@ -7,6 +7,7 @@ from influxdb_client import InfluxDBClient, Point, WriteOptions
 from influxdb_client.client.write_api import SYNCHRONOUS
 import json
 import os
+import array
 
 from os import path
 from typing import cast
@@ -49,9 +50,9 @@ influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 if os.path.exists('private-api.py'):
     print("included: private-api.py")
     exec(compile(source=open('private-api.py').read(), filename='private-api.py', mode='exec'))
-    withings_auth_code="DONE"
+    withings_auth_code=""
     debug = False
-    showRaw = True
+showRaw = True
 
 
 # report debug status
@@ -88,17 +89,28 @@ auth = WithingsAuth(
     )
 )
 
-if withings_auth_code == "":
+if withings_auth_code == "INIT":
     authorise_url = auth.get_authorize_url()
     print("Goto this URL to authorise:\n\n",authorise_url)
     quit()
 else:
-    if withings_auth_code != "DONE":
+    if withings_auth_code != "":
         print("Getting oauth token with auth code:", withings_auth_code)        
         save_credentials(auth.get_credentials(withings_auth_code))
-        withings_auth_code="DONE"
+        withings_auth_code=""
 
 read_api = WithingsApi(load_credentials(), refresh_cb=save_credentials)
+
+print("Refreshing token...")
+old_token = read_api.get_credentials().access_token
+
+read_api.refresh_token()
+
+if old_token != read_api.get_credentials().access_token:
+    print("NO Refresh: old and new token are the same!")
+else:
+    print("Refresh: old and new are different")
+
 
 
 
@@ -441,12 +453,15 @@ for serie in sleepSummary.series:
         del senddata["fields"]["percent"]
 
 
+
+
 # get sleep
 sleepRaw = read_api.sleep_get(
     data_fields=GetSleepField,
     startdate=ago,
     enddate=now,
     )
+
 
 # pass sleep
 senddata={}
