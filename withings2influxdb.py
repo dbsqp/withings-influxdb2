@@ -50,9 +50,8 @@ influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 if os.path.exists('private-api.py'):
     print("included: private-api.py")
     exec(compile(source=open('private-api.py').read(), filename='private-api.py', mode='exec'))
-    withings_auth_code=""
-    debug = False
-showRaw = True
+    withings_auth_code="INIT"
+    debug = True
 
 
 # report debug status
@@ -123,7 +122,7 @@ client = InfluxDBClient(url=influxdb2_url, token=influxdb2_token, org=influxdb2_
 write_api = client.write_api(write_options=SYNCHRONOUS)
 
 def write_influxdb():
-    if debug:
+    if showRaw:
         print ("INFLUX: "+influxdb2_bucket)
         print (json.dumps(senddata,indent=4))
     write_api.write(bucket=influxdb2_bucket, org=influxdb2_org, record=[senddata])
@@ -138,6 +137,7 @@ start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%f
 
 
 # get height
+print("Getting height...")
 heights = read_api.measure_get_meas(
     category=MeasureGetMeasGroupCategory.REAL,
     startdate=start,
@@ -151,12 +151,13 @@ for measurement in heights.measuregrps:
         if measure.type == MeasureType.HEIGHT:
             height = round(measure.value * 10 ** measure.unit, 2)
 
-if showRaw:
+if debug:
     print("RAW:\n  HEIGHT ",height)
 
 
 
 # get weight/bp/temp
+print("Getting weight/bp/temp...")
 measurements = read_api.measure_get_meas(
     category=MeasureGetMeasGroupCategory.REAL,
     startdate=ago,
@@ -173,7 +174,7 @@ for measurement in measurements.measuregrps:
 
     time = measurement.date.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    if showRaw:
+    if debug:
         print("RAW:\n  time ",time)
     for measure in measurement.measures:
         value = round(measure.value * 10 ** measure.unit, 2)
@@ -187,7 +188,7 @@ for measurement in measurements.measuregrps:
         if measure.type == MeasureType.SYSTOLIC_BLOOD_PRESSURE:  sys = value
         if measure.type == MeasureType.BODY_TEMPERATURE:        body = value
         if measure.type == MeasureType.SKIN_TEMPERATURE:        skin = value
-        if showRaw:
+        if debug:
             print(" ",measure.type.name, value)
 
     senddata={}
@@ -261,6 +262,7 @@ for measurement in measurements.measuregrps:
 
 # get sleep summary
 # note GetSleepSummaryField is NOT complate
+print("Getting sleep summary...")
 sleepSummary = read_api.sleep_get_summary(
     data_fields=GetSleepSummaryField,
     startdateymd=ago,
@@ -274,11 +276,11 @@ for serie in sleepSummary.series:
 
     time = serie.date.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    if showRaw:
+    if debug:
          print("RAW:\n  time ",time)
 
     for data in serie.data:
-        if showRaw:
+        if debug:
             print(" ",data[0]," = ",data[1])
 
         if data[0] == "hr_average": hrAvg = data[1]
@@ -456,6 +458,7 @@ for serie in sleepSummary.series:
 
 
 # get sleep
+print("Getting sleep raw...")
 sleepRaw = read_api.sleep_get(
     data_fields=GetSleepField,
     startdate=ago,
@@ -478,7 +481,7 @@ for serie in sleepRaw.series:
     senddata["tags"]["type"]="sleeping"
 
     for record in serie.hr:
-        if showRaw:
+        if debug:
             print(" ",record.timestamp," HR = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
@@ -487,7 +490,7 @@ for serie in sleepRaw.series:
         write_influxdb()
 
     for record in serie.sdnn_1:
-        if showRaw:
+        if debug:
             print(" ",record.timestamp," SD = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
@@ -496,7 +499,7 @@ for serie in sleepRaw.series:
         write_influxdb()
 
     for record in serie.rmssd:
-        if showRaw:
+        if debug:
             print(" ",record.timestamp,"RMS = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
@@ -508,7 +511,7 @@ for serie in sleepRaw.series:
     senddata["tags"]["mode"]="raw"
 
     for record in serie.rr:
-        if showRaw:
+        if debug:
             print(" ",record.timestamp," RR = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
@@ -521,7 +524,7 @@ for serie in sleepRaw.series:
     senddata["tags"]["mode"]="raw"
 
     for record in serie.snoring:
-        if showRaw:
+        if debug:
             print(" ",record.timestamp," SN = ",record.value)
         time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
         senddata["time"]=time
@@ -530,4 +533,5 @@ for serie in sleepRaw.series:
 
     del senddata["fields"]["duration"]
 
+print("Done")
 exit(0)
