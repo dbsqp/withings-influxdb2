@@ -1,5 +1,5 @@
 # withings-influxdbv2
-Docker container to fetch data from the Withings API and place it in your influxdb. Uses https://github.com/vangorra/python_withings_api
+Docker container to fetch data from the Withings API and place it in your influxdb. Uses a modified version of https://github.com/vangorra/python_withings_api to allow access to further paramaters from withings API https://developer.withings.com/api-reference/. 
 
 ## Withings API Token
 - Go to: https://developer.withings.com
@@ -16,7 +16,7 @@ Setup InfluxDBv2, create bucket and create a token with write permissions for sa
 $ docker run -d \
  -e WITHINGS_CLIENT_ID="<WITHINGS CLIENT ID>" \
  -e WITHINGS_CLIENT_SECRET="<WITHINGS CLIENT SECRET>" \
- -e WITHINGS_AUTH_CODE="<WITHINGS_AUTH_CODE>" \
+ -e WITHINGS_AUTH_CODE="INIT/<WITHINGS_AUTH_CODE>/-" \
  -e INFLUXDB2_HOST="<INFLUXDBv2 SERVER>" \
  -e INFLUXDB2_PORT="8086" \
  -e INFLUXDB2_ORG="Home" \
@@ -25,7 +25,7 @@ $ docker run -d \
  --name "Withings-InfluxDBv2" \
 dbsqp/withings-influxdbv2:latest
 ```
-First start get authentication url from container log, then populate WITHINGS_AUTH_CODE with code taken from callback, once workng set to DONE. Token is stored in directory for easy removal via docker volume.
+Start container WITHINGS_AUTH_CODE="INIT", this will generate URL in log. Goto URL, authenticate and copy authorisation code. Restart container with WITHINGS_AUTH_CODE="received authorisation code". Check log to ensure oauth authorisation worked and token created. This can take multiple trys for some reason. Once workng reset WITHINGS_AUTH_CODE="" and restart. Token is stored in directory for easy removal via docker volume.
 
 ## Debug
 To report out further details in the log enable debug:
