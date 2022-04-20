@@ -50,9 +50,9 @@ influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 if os.path.exists('private-api.py'):
     print("included: private-api.py")
     exec(compile(source=open('private-api.py').read(), filename='private-api.py', mode='exec'))
-    withings_auth_code="INIT"
+    withings_auth_code=""
     debug = True
-
+showRaw = False
 
 # report debug status
 if debug:
@@ -130,11 +130,9 @@ def write_influxdb():
 
 
 # setup time ranges
-now=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-ago=(datetime.utcnow()+timedelta(days=-2)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-
-
+now=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+ago=(datetime.utcnow()+timedelta(days=-2)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
 # get height
 print("Getting height...")
@@ -172,10 +170,10 @@ for measurement in measurements.measuregrps:
     sys=0
     body=0
 
-    time = measurement.date.strftime("%Y-%m-%dT%H:%M:%SZ")
+    time = measurement.date.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
 
     if debug:
-        print("RAW:\n  time ",time)
+        print("RAW:\n time",time)
     for measure in measurement.measures:
         value = round(measure.value * 10 ** measure.unit, 2)
 
@@ -234,6 +232,7 @@ for measurement in measurements.measuregrps:
     if sys !=0:
         senddata["measurement"]="heart"
         senddata["tags"]["type"]="systolic"
+        senddata["tags"]["mode"]="avg"
         senddata["fields"]["bp"]=float(sys)
         write_influxdb()
 
@@ -247,6 +246,7 @@ for measurement in measurements.measuregrps:
         write_influxdb()
         del senddata["fields"]["bpm"]
         del senddata["tags"]["type"]
+        del senddata["tags"]["mode"]
 
     if body !=0:
         senddata["measurement"]="temperature"
@@ -261,7 +261,7 @@ for measurement in measurements.measuregrps:
 
 
 # get sleep summary
-# note need modified api for all fields
+# note need modified api to access all fields
 print("Getting sleep summary...")
 sleepSummary = read_api.sleep_get_summary(
     data_fields=GetSleepSummaryField,
@@ -274,11 +274,13 @@ sleepSummary = read_api.sleep_get_summary(
 for serie in sleepSummary.series:
     hrAvg=0
 
-    time = serie.date.strftime("%Y-%m-%dT%H:%M:%SZ")
-    time = serie.startdate+(serie.enddate-serie.startdate)/2;
+    time = (serie.startdate+(serie.enddate-serie.startdate)/2).strftime("%Y-%m-%dT%H:%M:%S.%f%z");
 
     if debug:
-         print("RAW:\n  time ",time)
+         print("RAW:")
+         print("  start ",serie.startdate)
+         print("  time  ",time)
+         print("  end   ",serie.enddate)
 
     for data in serie.data:
         if debug:
@@ -339,15 +341,15 @@ for serie in sleepSummary.series:
         del senddata["fields"]["disturbed"]
 
         senddata["tags"]["mode"]="avg"
-        senddata["fields"]["bpm"]=float(rrAvg)
+        senddata["fields"]["bpm"]=round(float(rrAvg),2)
         write_influxdb()
 
         senddata["tags"]["mode"]="max"
-        senddata["fields"]["bpm"]=float(rrMax)
+        senddata["fields"]["bpm"]=round(float(rrMax),2)
         write_influxdb()
 
         senddata["tags"]["mode"]="min"
-        senddata["fields"]["bpm"]=float(rrMin)
+        senddata["fields"]["bpm"]=round(float(rrMin),2)
         write_influxdb()
 
 
@@ -358,15 +360,15 @@ for serie in sleepSummary.series:
         senddata["measurement"]="heart"
         senddata["tags"]["type"]="sleeping"
         senddata["tags"]["mode"]="avg"
-        senddata["fields"]["bpm"]=float(hrAvg)
+        senddata["fields"]["bpm"]=round(float(hrAvg),2)
         write_influxdb()
 
         senddata["tags"]["mode"]="max"
-        senddata["fields"]["bpm"]=float(hrMax)
+        senddata["fields"]["bpm"]=round(float(hrMax),2)
         write_influxdb()
 
         senddata["tags"]["mode"]="min"
-        senddata["fields"]["bpm"]=float(hrMin)
+        senddata["fields"]["bpm"]=round(float(hrMin),2)
         write_influxdb()
 
         del senddata["fields"]["bpm"]
@@ -456,9 +458,9 @@ for serie in sleepSummary.series:
         del senddata["fields"]["percent"]
 
 
-
-
+quit()
 # get sleep
+# note need modified api to access all fields
 print("Getting sleep raw...")
 sleepRaw = read_api.sleep_get(
     data_fields=GetSleepField,
@@ -484,7 +486,7 @@ for serie in sleepRaw.series:
     for record in serie.hr:
         if debug:
             print(" ",record.timestamp," HR = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
         senddata["time"]=time
         senddata["tags"]["mode"]="raw"
         senddata["fields"]["bpm"]=float(record.value)
@@ -493,7 +495,7 @@ for serie in sleepRaw.series:
     for record in serie.sdnn_1:
         if debug:
             print(" ",record.timestamp," SD = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
         senddata["time"]=time
         senddata["tags"]["mode"]="sdev"
         senddata["fields"]["bpm"]=float(record.value)
@@ -502,7 +504,7 @@ for serie in sleepRaw.series:
     for record in serie.rmssd:
         if debug:
             print(" ",record.timestamp,"RMS = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
         senddata["time"]=time
         senddata["tags"]["mode"]="rms"
         senddata["fields"]["bpm"]=float(record.value)
@@ -514,7 +516,7 @@ for serie in sleepRaw.series:
     for record in serie.rr:
         if debug:
             print(" ",record.timestamp," RR = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
         senddata["time"]=time
         senddata["fields"]["bpm"]=float(record.value)
         write_influxdb()
@@ -527,7 +529,7 @@ for serie in sleepRaw.series:
     for record in serie.snoring:
         if debug:
             print(" ",record.timestamp," SN = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
         senddata["time"]=time
         senddata["fields"]["duration"]=round(record.value/3600,2)
         write_influxdb()
