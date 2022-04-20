@@ -261,7 +261,7 @@ for measurement in measurements.measuregrps:
 
 
 # get sleep summary
-# note GetSleepSummaryField is NOT complate
+# note need modified api for all fields
 print("Getting sleep summary...")
 sleepSummary = read_api.sleep_get_summary(
     data_fields=GetSleepSummaryField,
@@ -275,6 +275,7 @@ for serie in sleepSummary.series:
     hrAvg=0
 
     time = serie.date.strftime("%Y-%m-%dT%H:%M:%SZ")
+    time = serie.startdate+(serie.enddate-serie.startdate)/2;
 
     if debug:
          print("RAW:\n  time ",time)
