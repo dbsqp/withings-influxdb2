@@ -458,7 +458,6 @@ for serie in sleepSummary.series:
         del senddata["fields"]["percent"]
 
 
-quit()
 # get sleep
 # note need modified api to access all fields
 print("Getting sleep raw...")
