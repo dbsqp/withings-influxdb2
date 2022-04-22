@@ -29,7 +29,11 @@ ENV PYTHONIOENCODING=utf-8
 RUN mkdir /python_withings_api/
 ADD python_withings_api /python_withings_api/
 ADD withings2influxdb.py /
-ADD get.sh /
+#ADD get.sh /
+
+# Setup Cron
+RUN crontab -l | { cat; echo "15 * * * * python3 /withings2influxdb.py"; } | crontab -
 
 # Run
-CMD ["/bin/bash","/get.sh"]
+#CMD ["/bin/bash","/get.sh"]
+CMD cron
