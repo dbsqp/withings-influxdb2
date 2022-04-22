@@ -237,16 +237,16 @@ for measurement in measurements.measuregrps:
         senddata["measurement"]="heart"
         senddata["tags"]["type"]="systolic"
         senddata["tags"]["mode"]="avg"
-        senddata["fields"]["bp"]=float(sys)
+        senddata["fields"]["bp"]=round(float(sys),2)
         write_influxdb()
 
         senddata["tags"]["type"]="diastolic"
-        senddata["fields"]["bp"]=float(dia)
+        senddata["fields"]["bp"]=round(float(dia),2)
         write_influxdb()
         del senddata["fields"]["bp"]
 
         senddata["tags"]["type"]="resting"
-        senddata["fields"]["bpm"]=float(hr)
+        senddata["fields"]["bpm"]=round(float(hr),2)
         write_influxdb()
         del senddata["fields"]["bpm"]
         del senddata["tags"]["type"]
@@ -255,11 +255,11 @@ for measurement in measurements.measuregrps:
     if body !=0:
         senddata["measurement"]="temperature"
         senddata["tags"]["sensor"]="Body"
-        senddata["fields"]["temp"]=float(body)
+        senddata["fields"]["temp"]=round(float(body),2)
         write_influxdb()
 
         senddata["tags"]["sensor"]="Skin"
-        senddata["fields"]["temp"]=float(skin)
+        senddata["fields"]["temp"]=round(float(skin),2)
         write_influxdb()
 
 
@@ -341,11 +341,11 @@ if hour == withings_sleep_at:
             senddata["measurement"]="respiration"
             senddata["tags"]["type"]="sleeping"
 
-            senddata["fields"]["ahi"]=float(ahi)
+            senddata["fields"]["ahi"]=round(float(ahi),2)
             write_influxdb()
             del senddata["fields"]["ahi"]
 
-            senddata["fields"]["disturbed"]=float(disturbed)
+            senddata["fields"]["disturbed"]=round(float(disturbed),2)
             write_influxdb()
             del senddata["fields"]["disturbed"]
 
@@ -458,11 +458,11 @@ if hour == withings_sleep_at:
 
 
             senddata["tags"]["type"]="score"
-            senddata["fields"]["percent"]=float(score)
+            senddata["fields"]["percent"]=round(float(score),2)
             write_influxdb()
 
             senddata["tags"]["type"]="efficiency"
-            senddata["fields"]["percent"]=float(efficiency)
+            senddata["fields"]["percent"]=round(float(efficiency),2)
             write_influxdb()
             del senddata["fields"]["percent"]
 
@@ -497,7 +497,7 @@ if hour == withings_sleep_at:
             time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
             senddata["time"]=time
             senddata["tags"]["mode"]="raw"
-            senddata["fields"]["bpm"]=float(record.value)
+            senddata["fields"]["bpm"]=round(float(record.value),2)
             write_influxdb()
 
         for record in serie.sdnn_1:
@@ -506,7 +506,7 @@ if hour == withings_sleep_at:
             time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
             senddata["time"]=time
             senddata["tags"]["mode"]="sdev"
-            senddata["fields"]["bpm"]=float(record.value)
+            senddata["fields"]["bpm"]=round(float(record.value),2)
             write_influxdb()
 
         for record in serie.rmssd:
@@ -515,7 +515,7 @@ if hour == withings_sleep_at:
             time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
             senddata["time"]=time
             senddata["tags"]["mode"]="rms"
-            senddata["fields"]["bpm"]=float(record.value)
+            senddata["fields"]["bpm"]=round(float(record.value),2)
             write_influxdb()
 
         senddata["measurement"]="respiration"
@@ -526,7 +526,7 @@ if hour == withings_sleep_at:
                 print(" ",record.timestamp," RR = ",record.value)
             time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
             senddata["time"]=time
-            senddata["fields"]["bpm"]=float(record.value)
+            senddata["fields"]["bpm"]=round(float(record.value),2)
             write_influxdb()
 
         del senddata["fields"]["bpm"]
