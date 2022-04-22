@@ -37,7 +37,7 @@ withings_clientId=os.getenv('WITHINGS_CLIENT_ID', "")
 withings_clientSecret=os.getenv('WITHINGS_CLIENT_SECRET', "")
 withings_callback=os.getenv('WITHINGS_CALLBACK', "")
 withings_auth_code=os.getenv('WITHINGS_AUTH_CODE', "")
-withings_sleep_stats=os.getenv('WITHINGS_SLEEP_STATS', "14")
+withings_sleep_at=os.getenv('WITHINGS_SLEEP_AT', "14")
 
 # influxDBv2 environment variables
 influxdb2_host=os.getenv('INFLUXDB2_HOST', "localhost")
@@ -135,8 +135,8 @@ now=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 ago=(datetime.utcnow()+timedelta(days=-2)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
-print ( "    current hour: ",hour )
-print ( "sleep stats hour: ",withings_sleep_stats )
+print ( " current hour: ",hour )
+print ( "sleep at hour: ",withings_sleep_at )
 
 # get height
 print("Getting height...")
@@ -266,10 +266,10 @@ for measurement in measurements.measuregrps:
 
 # get sleep summary and raw sleep
 # note need modified api to access all fields
-# only run at specific hour given by withings_sleep_stats
+# only run at specific hour given by withings_sleep_at
 
-if hour == withings_sleep_stats: 
-    print("Getting sleep data [",hour," == ",withings_sleep_stats,"]")
+if hour == withings_sleep_at: 
+    print("Getting sleep data [",hour," == ",withings_sleep_at,"]")
     
     print("Getting sleep summary...")
     sleepSummary = read_api.sleep_get_summary(
@@ -545,7 +545,7 @@ if hour == withings_sleep_stats:
         del senddata["fields"]["duration"]
 
 else:
-    print("Skipping sleep summary [",hour," != ",withings_sleep_stats,"]")
+    print("Skipping sleep summary [",hour," != ",withings_sleep_at,"]")
  
     
 print("Done")
