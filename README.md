@@ -14,6 +14,7 @@ Core script run hourly via cron but sleep stats only pulled once per day (hour =
 Setup InfluxDBv2, create bucket and create a token with write permissions for said bucket.
 
 ## Docker Setup
+https://hub.docker.com/r/dbsqp/withings-influxdbv2
 ```
 $ docker run -d \
  -e WITHINGS_CLIENT_ID="<WITHINGS CLIENT ID>" \
