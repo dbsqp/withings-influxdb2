@@ -131,7 +131,7 @@ def write_influxdb():
 
 
 # setup time ranges
-hour=datetime.utcnow().strftime('%H')
+hour=datetime.now().strftime('%H')
 now=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 ago=(datetime.utcnow()+timedelta(days=-2)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
