@@ -57,10 +57,9 @@ showRaw = False
 
 # report debug status
 if debug:
-    print ( "   debug: TRUE" )
+    print ( "debug: TRUE" )
 else:
-    print ( "   debug: FALSE" )
-
+    print ( "debug: FALSE" )
 
 
 # setup withings API
@@ -135,6 +134,9 @@ hour=datetime.now().strftime('%H')
 now=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 ago=(datetime.utcnow()+timedelta(days=-2)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+
+print ( "    current hour: ",hour )
+print ( "sleep stats hour: ",withings_sleep_stats )
 
 # get height
 print("Getting height...")
