@@ -56,6 +56,9 @@ if os.path.exists('private-api.py'):
 showRaw = False
 
 # report debug status
+date=datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+print ( "date:",date )
+
 if debug:
     print ( "debug: TRUE" )
 else:
@@ -546,7 +549,10 @@ if hour == withings_sleep_at:
 
 else:
     print("Skipping sleep summary [",hour," != ",withings_sleep_at,"]")
- 
-    
+
+# end
+date=datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+print ( "date:",date )
 print("Done")
+    
 exit(0)
