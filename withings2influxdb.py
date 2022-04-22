@@ -270,7 +270,8 @@ for measurement in measurements.measuregrps:
 
 if hour == withings_sleep_stats: 
     print("Getting sleep data [",hour," == ",withings_sleep_stats,"]")
-
+    
+    print("Getting sleep summary...")
     sleepSummary = read_api.sleep_get_summary(
         data_fields=GetSleepSummaryField,
         startdateymd=ago,
