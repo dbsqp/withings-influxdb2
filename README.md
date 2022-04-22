@@ -1,7 +1,7 @@
 # withings-influxdbv2
 Docker container to fetch data from the Withings API and place it in your influxdb. Uses a modified version of https://github.com/vangorra/python_withings_api to allow access to further paramaters from withings API https://developer.withings.com/api-reference/.
 
-Core script run hourly via cron but average sleep stats only pulled once per day (hour = WITHINGS_SLEEP_STATS) to allow synchronisation of data pulled by docker and sources.
+Core script run hourly via cron but sleep stats only pulled once per day (hour = WITHINGS_SLEEP_AT) to allow synchronisation of data pulled by docker and sources.
 
 ## Withings API Token
 - Go to: https://developer.withings.com
@@ -19,7 +19,7 @@ $ docker run -d \
  -e WITHINGS_CLIENT_ID="<WITHINGS CLIENT ID>" \
  -e WITHINGS_CLIENT_SECRET="<WITHINGS CLIENT SECRET>" \
  -e WITHINGS_AUTH_CODE="INIT/<WITHINGS_AUTH_CODE>/-" \
- -e WITHINGS_SLEEP_STATS="<hour>" \
+ -e WITHINGS_SLEEP_AT="<hour>" \
  -e INFLUXDB2_HOST="<INFLUXDBv2 SERVER>" \
  -e INFLUXDB2_PORT="8086" \
  -e INFLUXDB2_ORG="Home" \
