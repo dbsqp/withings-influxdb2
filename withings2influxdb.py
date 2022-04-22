@@ -37,6 +37,7 @@ withings_clientId=os.getenv('WITHINGS_CLIENT_ID', "")
 withings_clientSecret=os.getenv('WITHINGS_CLIENT_SECRET', "")
 withings_callback=os.getenv('WITHINGS_CALLBACK', "")
 withings_auth_code=os.getenv('WITHINGS_AUTH_CODE', "")
+withings_sleep_stats=os.getenv('WITHINGS_SLEEP_STATS', "14")
 
 # influxDBv2 environment variables
 influxdb2_host=os.getenv('INFLUXDB2_HOST', "localhost")
@@ -130,6 +131,7 @@ def write_influxdb():
 
 
 # setup time ranges
+hour=datetime.utcnow().strftime('%H')
 now=datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 ago=(datetime.utcnow()+timedelta(days=-2)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 start=(datetime.utcnow()+timedelta(days=-15*365)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
@@ -262,200 +264,206 @@ for measurement in measurements.measuregrps:
 
 # get sleep summary
 # note need modified api to access all fields
-print("Getting sleep summary...")
-sleepSummary = read_api.sleep_get_summary(
-    data_fields=GetSleepSummaryField,
-    startdateymd=ago,
-    enddateymd=now,
-    lastupdate=None,
-)
+# only run at specific hour given by withings_sleep_stats
 
-# pass sleep summary
-for serie in sleepSummary.series:
-    hrAvg=0
+if hour == withings_sleep_stats: 
+    print("Getting sleep summary [",hour," == ",withings_sleep_stats,"]")
 
-    time = (serie.startdate+(serie.enddate-serie.startdate)/2).strftime("%Y-%m-%dT%H:%M:%S.%f%z");
+    sleepSummary = read_api.sleep_get_summary(
+        data_fields=GetSleepSummaryField,
+        startdateymd=ago,
+        enddateymd=now,
+        lastupdate=None,
+    )
 
-    if debug:
-         print("RAW:")
-         print("  start ",serie.startdate)
-         print("  time  ",time)
-         print("  end   ",serie.enddate)
+    # pass sleep summary
+    for serie in sleepSummary.series:
+        hrAvg=0
 
-    for data in serie.data:
+        time = (serie.startdate+(serie.enddate-serie.startdate)/2).strftime("%Y-%m-%dT%H:%M:%S.%f%z");
+
         if debug:
-            print(" ",data[0]," = ",data[1])
+            print("RAW:")
+            print("  start ",serie.startdate)
+            print("  time  ",time)
+            print("  end   ",serie.enddate)
 
-        if data[0] == "hr_average": hrAvg = data[1]
-        if data[0] == "hr_max":     hrMax = data[1]
-        if data[0] == "hr_min":     hrMin = data[1]
-        if data[0] == "rr_average": rrAvg = data[1]
-        if data[0] == "rr_max":     rrMax = data[1]
-        if data[0] == "rr_min":     rrMin = data[1]
+        for data in serie.data:
+            if debug:
+                print(" ",data[0]," = ",data[1])
 
-        if data[0] == "deepsleepduration":     dDeep = data[1]
-        if data[0] == "lightsleepduration":    dLite = data[1]
-        if data[0] == "remsleepduration":       dREM = data[1]
-        if data[0] == "wakeupduration":       dAwake = data[1]
+            if data[0] == "hr_average": hrAvg = data[1]
+            if data[0] == "hr_max":     hrMax = data[1]
+            if data[0] == "hr_min":     hrMin = data[1]
+            if data[0] == "rr_average": rrAvg = data[1]
+            if data[0] == "rr_max":     rrMax = data[1]
+            if data[0] == "rr_min":     rrMin = data[1]
 
-        if data[0] == "snoring":            dSnoring = data[1]
-        if data[0] == "waso":                dWokeup = data[1]
-        if data[0] == "total_sleep_time":     dSleep = data[1]
-        if data[0] == "total_timeinbed":      dInBed = data[1]
+            if data[0] == "deepsleepduration":     dDeep = data[1]
+            if data[0] == "lightsleepduration":    dLite = data[1]
+            if data[0] == "remsleepduration":       dREM = data[1]
+            if data[0] == "wakeupduration":       dAwake = data[1]
 
-        if data[0] == "sleep_latency":        lSleep = data[1]
-        if data[0] == "wakeup_latency":      lWakeup = data[1]
+            if data[0] == "snoring":            dSnoring = data[1]
+            if data[0] == "waso":                dWokeup = data[1]
+            if data[0] == "total_sleep_time":     dSleep = data[1]
+            if data[0] == "total_timeinbed":      dInBed = data[1]
 
-        if data[0] == "wakeupcount":         nWakeup = data[1]
-        if data[0] == "snoringepisodecount":  nSnore = data[1]
-        if data[0] == "nb_rem_episodes":        nREM = data[1]
-        if data[0] == "out_of_bed_count":    nOutBed = data[1]
+            if data[0] == "sleep_latency":        lSleep = data[1]
+            if data[0] == "wakeup_latency":      lWakeup = data[1]
 
-        if data[0] == "sleep_score":           score = data[1]
-        if data[0] == "sleep_efficiency": efficiency = data[1]
+            if data[0] == "wakeupcount":         nWakeup = data[1]
+            if data[0] == "snoringepisodecount":  nSnore = data[1]
+            if data[0] == "nb_rem_episodes":        nREM = data[1]
+            if data[0] == "out_of_bed_count":    nOutBed = data[1]
 
-        if data[0] == "breathing_disturbances_intensity": disturbed = data[1]
-        if data[0] == "apnea_hypopnea_index":    ahi = data[1]
+            if data[0] == "sleep_score":           score = data[1]
+            if data[0] == "sleep_efficiency": efficiency = data[1]
 
-        ## Depreciated
-        #if data[0] == "durationtowakeup":    dToWake = data[1]
-        #if data[0] == "durationtosleep":    dToSleep = data[1]
+            if data[0] == "breathing_disturbances_intensity": disturbed = data[1]
+            if data[0] == "apnea_hypopnea_index":    ahi = data[1]
 
-    senddata={}
-    senddata["time"]=time
-    senddata["tags"]={}
-    senddata["tags"]["source"]="docker withings-influxdbv2"
-    senddata["tags"]["origin"]="Withings"
-    senddata["fields"]={}
+            ## Depreciated
+            #if data[0] == "durationtowakeup":    dToWake = data[1]
+            #if data[0] == "durationtosleep":    dToSleep = data[1]
 
-    if rrAvg !=0:
-        senddata["measurement"]="respiration"
-        senddata["tags"]["type"]="sleeping"
+        senddata={}
+        senddata["time"]=time
+        senddata["tags"]={}
+        senddata["tags"]["source"]="docker withings-influxdbv2"
+        senddata["tags"]["origin"]="Withings"
+        senddata["fields"]={}
 
-        senddata["fields"]["ahi"]=float(ahi)
-        write_influxdb()
-        del senddata["fields"]["ahi"]
+        if rrAvg !=0:
+            senddata["measurement"]="respiration"
+            senddata["tags"]["type"]="sleeping"
 
-        senddata["fields"]["disturbed"]=float(disturbed)
-        write_influxdb()
-        del senddata["fields"]["disturbed"]
+            senddata["fields"]["ahi"]=float(ahi)
+            write_influxdb()
+            del senddata["fields"]["ahi"]
 
-        senddata["tags"]["mode"]="avg"
-        senddata["fields"]["bpm"]=round(float(rrAvg),2)
-        write_influxdb()
+            senddata["fields"]["disturbed"]=float(disturbed)
+            write_influxdb()
+            del senddata["fields"]["disturbed"]
 
-        senddata["tags"]["mode"]="max"
-        senddata["fields"]["bpm"]=round(float(rrMax),2)
-        write_influxdb()
+            senddata["tags"]["mode"]="avg"
+            senddata["fields"]["bpm"]=round(float(rrAvg),2)
+            write_influxdb()
 
-        senddata["tags"]["mode"]="min"
-        senddata["fields"]["bpm"]=round(float(rrMin),2)
-        write_influxdb()
+            senddata["tags"]["mode"]="max"
+            senddata["fields"]["bpm"]=round(float(rrMax),2)
+            write_influxdb()
 
-
-        del senddata["fields"]["bpm"]
-        del senddata["tags"]["mode"]
-
-    if hrAvg !=0:
-        senddata["measurement"]="heart"
-        senddata["tags"]["type"]="sleeping"
-        senddata["tags"]["mode"]="avg"
-        senddata["fields"]["bpm"]=round(float(hrAvg),2)
-        write_influxdb()
-
-        senddata["tags"]["mode"]="max"
-        senddata["fields"]["bpm"]=round(float(hrMax),2)
-        write_influxdb()
-
-        senddata["tags"]["mode"]="min"
-        senddata["fields"]["bpm"]=round(float(hrMin),2)
-        write_influxdb()
-
-        del senddata["fields"]["bpm"]
-        del senddata["tags"]["mode"]
-
-    if dDeep !=0:
-        senddata["measurement"]="sleep"
-        senddata["tags"]["type"]="deep"
-        senddata["tags"]["mode"]="total"
-        senddata["fields"]["duration"]=round(dDeep/3600,2)
-        write_influxdb()
-
-        senddata["tags"]["type"]="light"
-        senddata["fields"]["duration"]=round(dLite/3600,2)
-        write_influxdb()
-
-        senddata["tags"]["type"]="rem"
-        senddata["fields"]["duration"]=round(dREM/3600,1)
-        write_influxdb()
-
-        #senddata["tags"]["type"]="wakeup"
-        #senddata["fields"]["duration"]=round(dToWake/3600,2)
-        #write_influxdb()
-
-        #senddata["tags"]["type"]="tosleep"
-        #senddata["fields"]["duration"]=round(dToSleep/3600,2)
-        #write_influxdb()
-
-        senddata["tags"]["type"]="snoring"
-        senddata["fields"]["duration"]=round(dSnoring/3600,2)
-        write_influxdb()
-
-        senddata["tags"]["type"]="woke"
-        senddata["fields"]["duration"]=round(dWokeup/3600,2)
-        write_influxdb()
-
-        senddata["tags"]["type"]="sleep"
-        senddata["fields"]["duration"]=round(dSleep/3600,2)
-        write_influxdb()
-
-        senddata["tags"]["type"]="inbed"
-        senddata["fields"]["duration"]=round(dInBed/3600,2)
-        write_influxdb()
-
-        senddata["tags"]["type"]="awake"
-        senddata["fields"]["duration"]=round(dAwake/3600,2)
-        write_influxdb()
-        del senddata["fields"]["duration"]
-        del senddata["tags"]["mode"]
+            senddata["tags"]["mode"]="min"
+            senddata["fields"]["bpm"]=round(float(rrMin),2)
+            write_influxdb()
 
 
-        senddata["tags"]["type"]="sleep"
-        senddata["fields"]["latency"]=round(lSleep/3600,2)
-        write_influxdb()
+            del senddata["fields"]["bpm"]
+            del senddata["tags"]["mode"]
 
-        senddata["tags"]["type"]="wakeup"
-        senddata["fields"]["latency"]=round(lWakeup/3600,2)
-        write_influxdb()
-        del senddata["fields"]["latency"]
+        if hrAvg !=0:
+            senddata["measurement"]="heart"
+            senddata["tags"]["type"]="sleeping"
+            senddata["tags"]["mode"]="avg"
+            senddata["fields"]["bpm"]=round(float(hrAvg),2)
+            write_influxdb()
+
+            senddata["tags"]["mode"]="max"
+            senddata["fields"]["bpm"]=round(float(hrMax),2)
+            write_influxdb()
+
+            senddata["tags"]["mode"]="min"
+            senddata["fields"]["bpm"]=round(float(hrMin),2)
+            write_influxdb()
+
+            del senddata["fields"]["bpm"]
+            del senddata["tags"]["mode"]
+
+        if dDeep !=0:
+            senddata["measurement"]="sleep"
+            senddata["tags"]["type"]="deep"
+            senddata["tags"]["mode"]="total"
+            senddata["fields"]["duration"]=round(dDeep/3600,2)
+            write_influxdb()
+
+            senddata["tags"]["type"]="light"
+            senddata["fields"]["duration"]=round(dLite/3600,2)
+            write_influxdb()
+
+            senddata["tags"]["type"]="rem"
+            senddata["fields"]["duration"]=round(dREM/3600,1)
+            write_influxdb()
+
+            #senddata["tags"]["type"]="wakeup"
+            #senddata["fields"]["duration"]=round(dToWake/3600,2)
+            #write_influxdb()
+
+            #senddata["tags"]["type"]="tosleep"
+            #senddata["fields"]["duration"]=round(dToSleep/3600,2)
+            #write_influxdb()
+
+            senddata["tags"]["type"]="snoring"
+            senddata["fields"]["duration"]=round(dSnoring/3600,2)
+            write_influxdb()
+
+            senddata["tags"]["type"]="woke"
+            senddata["fields"]["duration"]=round(dWokeup/3600,2)
+            write_influxdb()
+
+            senddata["tags"]["type"]="sleep"
+            senddata["fields"]["duration"]=round(dSleep/3600,2)
+            write_influxdb()
+
+            senddata["tags"]["type"]="inbed"
+            senddata["fields"]["duration"]=round(dInBed/3600,2)
+            write_influxdb()
+
+            senddata["tags"]["type"]="awake"
+            senddata["fields"]["duration"]=round(dAwake/3600,2)
+            write_influxdb()
+            del senddata["fields"]["duration"]
+            del senddata["tags"]["mode"]
 
 
-        senddata["tags"]["type"]="snoring"
-        senddata["fields"]["count"]=int(nSnore)
-        write_influxdb()
+            senddata["tags"]["type"]="sleep"
+            senddata["fields"]["latency"]=round(lSleep/3600,2)
+            write_influxdb()
 
-        senddata["tags"]["type"]="rem"
-        senddata["fields"]["count"]=int(nREM)
-        write_influxdb()
-
-        senddata["tags"]["type"]="wakeup"
-        senddata["fields"]["count"]=int(nWakeup)
-        write_influxdb()
-
-        senddata["tags"]["type"]="outofbed"
-        senddata["fields"]["count"]=int(nOutBed)
-        write_influxdb()
-        del senddata["fields"]["count"]
+            senddata["tags"]["type"]="wakeup"
+            senddata["fields"]["latency"]=round(lWakeup/3600,2)
+            write_influxdb()
+            del senddata["fields"]["latency"]
 
 
-        senddata["tags"]["type"]="score"
-        senddata["fields"]["percent"]=float(score)
-        write_influxdb()
+            senddata["tags"]["type"]="snoring"
+            senddata["fields"]["count"]=int(nSnore)
+            write_influxdb()
 
-        senddata["tags"]["type"]="efficiency"
-        senddata["fields"]["percent"]=float(efficiency)
-        write_influxdb()
-        del senddata["fields"]["percent"]
+            senddata["tags"]["type"]="rem"
+            senddata["fields"]["count"]=int(nREM)
+            write_influxdb()
+
+            senddata["tags"]["type"]="wakeup"
+            senddata["fields"]["count"]=int(nWakeup)
+            write_influxdb()
+
+            senddata["tags"]["type"]="outofbed"
+            senddata["fields"]["count"]=int(nOutBed)
+            write_influxdb()
+            del senddata["fields"]["count"]
+
+
+            senddata["tags"]["type"]="score"
+            senddata["fields"]["percent"]=float(score)
+            write_influxdb()
+
+            senddata["tags"]["type"]="efficiency"
+            senddata["fields"]["percent"]=float(efficiency)
+            write_influxdb()
+            del senddata["fields"]["percent"]
+else:
+    print("Skipping sleep summary [",hour," != ",withings_sleep_stats,"]")
 
 
 # get sleep
