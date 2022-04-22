@@ -264,12 +264,12 @@ for measurement in measurements.measuregrps:
 
 
 
-# get sleep summary
+# get sleep summary and raw sleep
 # note need modified api to access all fields
 # only run at specific hour given by withings_sleep_stats
 
 if hour == withings_sleep_stats: 
-    print("Getting sleep summary [",hour," == ",withings_sleep_stats,"]")
+    print("Getting sleep data [",hour," == ",withings_sleep_stats,"]")
 
     sleepSummary = read_api.sleep_get_summary(
         data_fields=GetSleepSummaryField,
@@ -464,86 +464,88 @@ if hour == withings_sleep_stats:
             senddata["fields"]["percent"]=float(efficiency)
             write_influxdb()
             del senddata["fields"]["percent"]
+
+
+    # get sleep 
+    # note need modified api to access all fields
+    print("Getting sleep raw...")
+    sleepRaw = read_api.sleep_get(
+        data_fields=GetSleepField,
+        startdate=ago,
+        enddate=now,
+        )
+
+
+    # pass sleep
+    senddata={}
+    senddata["tags"]={}
+    senddata["tags"]["source"]="docker withings-influxdbv2"
+    senddata["tags"]["origin"]="Withings"
+    senddata["fields"]={}
+
+
+    for serie in sleepRaw.series:
+        hrAvg=0
+
+        senddata["measurement"]="heart"
+        senddata["tags"]["type"]="sleeping"
+
+        for record in serie.hr:
+            if debug:
+                print(" ",record.timestamp," HR = ",record.value)
+            time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+            senddata["time"]=time
+            senddata["tags"]["mode"]="raw"
+            senddata["fields"]["bpm"]=float(record.value)
+            write_influxdb()
+
+        for record in serie.sdnn_1:
+            if debug:
+                print(" ",record.timestamp," SD = ",record.value)
+            time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
+            senddata["time"]=time
+            senddata["tags"]["mode"]="sdev"
+            senddata["fields"]["bpm"]=float(record.value)
+            write_influxdb()
+
+        for record in serie.rmssd:
+            if debug:
+                print(" ",record.timestamp,"RMS = ",record.value)
+            time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
+            senddata["time"]=time
+            senddata["tags"]["mode"]="rms"
+            senddata["fields"]["bpm"]=float(record.value)
+            write_influxdb()
+
+        senddata["measurement"]="respiration"
+        senddata["tags"]["mode"]="raw"
+
+        for record in serie.rr:
+            if debug:
+                print(" ",record.timestamp," RR = ",record.value)
+            time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+            senddata["time"]=time
+            senddata["fields"]["bpm"]=float(record.value)
+            write_influxdb()
+
+        del senddata["fields"]["bpm"]
+        senddata["measurement"]="sleep"
+        senddata["tags"]["type"]="snoring"
+        senddata["tags"]["mode"]="raw"
+
+        for record in serie.snoring:
+            if debug:
+                print(" ",record.timestamp," SN = ",record.value)
+            time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+            senddata["time"]=time
+            senddata["fields"]["duration"]=round(record.value/3600,2)
+            write_influxdb()
+
+        del senddata["fields"]["duration"]
+
 else:
     print("Skipping sleep summary [",hour," != ",withings_sleep_stats,"]")
-
-
-# get sleep
-# note need modified api to access all fields
-print("Getting sleep raw...")
-sleepRaw = read_api.sleep_get(
-    data_fields=GetSleepField,
-    startdate=ago,
-    enddate=now,
-    )
-
-
-# pass sleep
-senddata={}
-senddata["tags"]={}
-senddata["tags"]["source"]="docker withings-influxdbv2"
-senddata["tags"]["origin"]="Withings"
-senddata["fields"]={}
-
-
-for serie in sleepRaw.series:
-    hrAvg=0
-
-    senddata["measurement"]="heart"
-    senddata["tags"]["type"]="sleeping"
-
-    for record in serie.hr:
-        if debug:
-            print(" ",record.timestamp," HR = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
-        senddata["time"]=time
-        senddata["tags"]["mode"]="raw"
-        senddata["fields"]["bpm"]=float(record.value)
-        write_influxdb()
-
-    for record in serie.sdnn_1:
-        if debug:
-            print(" ",record.timestamp," SD = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
-        senddata["time"]=time
-        senddata["tags"]["mode"]="sdev"
-        senddata["fields"]["bpm"]=float(record.value)
-        write_influxdb()
-
-    for record in serie.rmssd:
-        if debug:
-            print(" ",record.timestamp,"RMS = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f.%z")
-        senddata["time"]=time
-        senddata["tags"]["mode"]="rms"
-        senddata["fields"]["bpm"]=float(record.value)
-        write_influxdb()
-
-    senddata["measurement"]="respiration"
-    senddata["tags"]["mode"]="raw"
-
-    for record in serie.rr:
-        if debug:
-            print(" ",record.timestamp," RR = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
-        senddata["time"]=time
-        senddata["fields"]["bpm"]=float(record.value)
-        write_influxdb()
-
-    del senddata["fields"]["bpm"]
-    senddata["measurement"]="sleep"
-    senddata["tags"]["type"]="snoring"
-    senddata["tags"]["mode"]="raw"
-
-    for record in serie.snoring:
-        if debug:
-            print(" ",record.timestamp," SN = ",record.value)
-        time = record.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
-        senddata["time"]=time
-        senddata["fields"]["duration"]=round(record.value/3600,2)
-        write_influxdb()
-
-    del senddata["fields"]["duration"]
-
+ 
+    
 print("Done")
 exit(0)
