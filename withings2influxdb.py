@@ -46,7 +46,12 @@ influxdb2_org=os.getenv('INFLUXDB2_ORG', "org")
 influxdb2_token=os.getenv('INFLUXDB2_TOKEN', "token")
 influxdb2_bucket=os.getenv('INFLUXDB2_BUCKET', "withings")
 
-
+influxdb2_ssl_str=os.getenv('INFLUXDB2_SSL', "False")
+if influxdb2_ssl_str is not None:
+    influxdb2_ssl = influxdb2_ssl_str.lower() == "true"
+else:
+    influxdb2_ssl = False
+    
 # hard encoded environment variables
 if os.path.exists('private-api.py'):
     print("included: private-api.py")
@@ -117,7 +122,11 @@ else:
 
 
 # setup influxDBv2
-influxdb2_url="http://" + influxdb2_host + ":" + str(influxdb2_port)
+is influxdb2_ssl_str:
+    influxdb2_url="http://" + influxdb2_host + ":" + str(influxdb2_port)
+else:
+    influxdb2_url="https://" + influxdb2_host + ":" + str(influxdb2_port)
+    
 if debug:
     print ( "influxdb: "+influxdb2_url+" bucket: "+influxdb2_bucket )
 
