@@ -122,7 +122,7 @@ else:
 
 
 # setup influxDBv2
-is influxdb2_ssl_str:
+if influxdb2_ssl_str:
     influxdb2_url="http://" + influxdb2_host + ":" + str(influxdb2_port)
 else:
     influxdb2_url="https://" + influxdb2_host + ":" + str(influxdb2_port)
