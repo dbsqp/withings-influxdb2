@@ -71,9 +71,17 @@ date=datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 print ( "date:",date )
 
 if debug:
-    print ( "debug: TRUE" )
+    print ( " debug: TRUE" )
+    if influxdb2_ssl:
+        print ( "   SSL: TRUE" )
+    else:
+        print ( "   SSL: FALSE" )
+    if influxdb2_ssl_verify:
+        print ( "verify: TRUE" )
+    else:
+        print ( "verify: FALSE" )
 else:
-    print ( "debug: FALSE" )
+    print ( " debug: FALSE" )
 
 
 # setup withings API
@@ -136,7 +144,15 @@ else:
 if debug:
     print ( "influxdb: "+influxdb2_url+" bucket: "+influxdb2_bucket )
 
-client = InfluxDBClient(url=influxdb2_url, token=influxdb2_token, org=influxdb2_org, verify_ssl=influxdb2_ssl_verify)
+if influxdb2_ssl_verify:
+    if debug:
+        print ( "verify: True" )
+    client = InfluxDBClient(url=influxdb2_url, token=influxdb2_token, org=influxdb2_org, verify_ssl=True)
+else:
+    if debug:
+        print ( "verify: False" )
+    client = InfluxDBClient(url=influxdb2_url, token=influxdb2_token, org=influxdb2_org, verify_ssl=False)
+    
 write_api = client.write_api(write_options=SYNCHRONOUS)
 
 def write_influxdb():
