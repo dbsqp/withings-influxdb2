@@ -52,6 +52,12 @@ if influxdb2_ssl_str is not None:
 else:
     influxdb2_ssl = False
     
+influxdb2_ssl_verify_str=os.getenv('INFLUXDB2_SSL_VERIFY', "True")
+if influxdb2_ssl_verify_str is not None:
+    influxdb2_ssl_verify = influxdb2_ssl_verify_str.lower() == "true"
+else:
+    influxdb2_ssl_verify = False
+    
 # hard encoded environment variables
 if os.path.exists('private-api.py'):
     print("included: private-api.py")
@@ -130,7 +136,7 @@ else:
 if debug:
     print ( "influxdb: "+influxdb2_url+" bucket: "+influxdb2_bucket )
 
-client = InfluxDBClient(url=influxdb2_url, token=influxdb2_token, org=influxdb2_org)
+client = InfluxDBClient(url=influxdb2_url, token=influxdb2_token, org=influxdb2_org, verify_ssl=influxdb2_ssl_verify)
 write_api = client.write_api(write_options=SYNCHRONOUS)
 
 def write_influxdb():
