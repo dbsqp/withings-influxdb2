@@ -34,6 +34,7 @@ Start container WITHINGS_AUTH_CODE="INIT", this will generate URL in log. Goto U
 # Options
 ```
  -e INFLUXDB2_SSL="true"
+ -e INFLUXDB2_SSL_VERIFY="False"
 ```
 
 # Debug
