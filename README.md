@@ -29,7 +29,7 @@ $ docker run -d \
  --name "Withings-InfluxDBv2" \
 dbsqp/withings-influxdbv2:latest
 ```
-Start container WITHINGS_AUTH_CODE="INIT", this will generate URL in log. Goto URL, authenticate and copy authorisation code. Restart container with WITHINGS_AUTH_CODE="received authorisation code". Check log to ensure oauth authorisation worked and token created. This can take multiple trys for some reason. Once workng reset WITHINGS_AUTH_CODE="" and restart. Token is stored in directory for easy removal via docker volume.
+Start container WITHINGS_AUTH_CODE="INIT", this will generate URL in log. Goto URL, authenticate and copy authorisation code. Restart container with WITHINGS_AUTH_CODE="received authorisation code". Check log to ensure oauth authorisation worked and token created. This can take multiple trys (The authorization code is valid for 30 seconds). Once workng reset WITHINGS_AUTH_CODE="" and restart. Token is stored in directory for easy removal via docker volume.
 
 # Options
 ```
