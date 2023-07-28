@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
 
 # RUN pip install setuptools
 #RUN pip3 install pytz influxdb-client oauthlib requests requests-oauth requests_oauthlib typing_extensions arrow withings-api
-RUN pip3 install pytz influxdb-client oauthlib requests requests-oauth requests_oauthlib typing_extensions arrow pydantic
+RUN pip3 install pytz influxdb-client oauthlib requests requests-oauth requests_oauthlib typing_extensions arrow pydantic==1.10.12
 
 # Environment vars
 ENV PYTHONIOENCODING=utf-8
