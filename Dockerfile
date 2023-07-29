@@ -26,9 +26,9 @@ ENV PYTHONIOENCODING=utf-8
 
 # Copy files
 RUN mkdir /python_withings_api/
-ADD python_withings_api /python_withings_api/
 ADD withings2influxdb.py /
 ADD enterypoint.sh /
+ADD python_withings_api /python_withings_api/
 
 # Run
 CMD ["/bin/bash","/enterypoint.sh"]
