@@ -17,7 +17,7 @@ from oauthlib.oauth2.rfc6749.errors import MissingTokenError
 
 from python_withings_api.withings_api import WithingsAuth, WithingsApi, AuthScope
 from python_withings_api.withings_api.common import CredentialsType, get_measure_value, MeasureType, GetSleepField, GetSleepSummaryField, MeasureGetMeasGroupCategory
-
+import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
