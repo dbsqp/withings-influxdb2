@@ -26,9 +26,9 @@ RUN pip3 install pytz influxdb-client oauthlib requests requests-oauth requests_
 ENV PYTHONIOENCODING=utf-8
 
 # Copy custom api
-#RUN mkdir /python_withings_api/
-#COPY python_withings_api /python_withings_api/
-RUN git clone https://github.com/dbsqp/python_withings_api.git
+RUN mkdir /python_withings_api/
+COPY python_withings_api /python_withings_api/
+#RUN git clone https://github.com/dbsqp/python_withings_api.git
 
 # Copy files
 COPY withings2influxdb.py /
