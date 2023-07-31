@@ -24,6 +24,10 @@ RUN pip3 install pytz influxdb-client oauthlib requests requests-oauth requests_
 # Environment vars
 ENV PYTHONIOENCODING=utf-8
 
+# folder test
+RUN mkdir /test/
+COPY test /test/
+
 # Copy custom api
 RUN mkdir /python_withings_api/
 COPY python_withings_api /python_withings_api/
