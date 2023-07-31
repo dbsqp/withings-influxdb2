@@ -3,6 +3,9 @@ ARG ARCH=
 # Pull base image
 FROM ubuntu:latest
 
+# Avoid warnings by switching to noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Labels
 LABEL MAINTAINER="https://github.com/dbsqp/"
 
