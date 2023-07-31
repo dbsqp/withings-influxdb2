@@ -28,6 +28,9 @@ RUN pip3 install pytz influxdb-client oauthlib requests requests-oauth requests_
 # Environment vars
 ENV PYTHONIOENCODING=utf-8
 
+# submodule update
+RUN git submodule update --init --recursive
+
 # Copy files
 COPY withings2influxdb.py /
 COPY enterypoint.sh /
