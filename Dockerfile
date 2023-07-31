@@ -8,7 +8,6 @@ LABEL MAINTAINER="https://github.com/dbsqp/"
 
 # Setup external package-sources
 RUN apt-get update && apt-get install -y \
-    git \
     cron \
     tzdata \
     python3 \
